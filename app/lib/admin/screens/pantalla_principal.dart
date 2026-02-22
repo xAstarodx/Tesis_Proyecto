@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/producto_service.dart';
-import '../models/producto.dart';
 import '../../widgets/login.dart';
 
 final productoService = ProductoService();
@@ -14,6 +14,7 @@ class PantallaPrincipal extends StatefulWidget {
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
   int _indiceSeleccionado = 0;
+  final _controladorTasa = TextEditingController();
 
   static const List<String> _titulos = ['Comida', 'Bebida', 'Montos'];
   static const List<IconData> _iconos = [
@@ -22,45 +23,33 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     Icons.attach_money,
   ];
 
-  final List<Producto> _productosComida = [];
-  final List<Producto> _productosBebida = [];
+  List<Map<String, dynamic>> _productosComida = [];
+  List<Map<String, dynamic>> _productosBebida = [];
 
   double _tasaCambio = 1.0;
+  bool _estaCargando = true;
 
   @override
   void initState() {
     super.initState();
+    _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
     _cargarProductos();
   }
 
+  @override
+  void dispose() {
+    _controladorTasa.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarProductos() async {
+    setState(() => _estaCargando = true);
     try {
       final comida = await productoService.obtenerProductosPorCategoria(2);
       final bebida = await productoService.obtenerProductosPorCategoria(1);
-
       setState(() {
-        _productosComida.clear();
-        _productosBebida.clear();
-
-        for (var p in comida) {
-          _productosComida.add(
-            Producto(
-              nombre: p['nombre'] ?? 'Sin nombre',
-              cantidad: p['stock'] ?? 0,
-              precioUsd: (p['precio'] as num?)?.toDouble() ?? 0.0,
-            ),
-          );
-        }
-
-        for (var p in bebida) {
-          _productosBebida.add(
-            Producto(
-              nombre: p['nombre'] ?? 'Sin nombre',
-              cantidad: p['stock'] ?? 0,
-              precioUsd: (p['precio'] as num?)?.toDouble() ?? 0.0,
-            ),
-          );
-        }
+        _productosComida = comida;
+        _productosBebida = bebida;
       });
     } catch (e) {
       print('Error cargando productos: $e');
@@ -69,6 +58,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           SnackBar(content: Text('Error al cargar: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _estaCargando = false);
+      }
     }
   }
 
@@ -76,6 +69,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     setState(() {
       _indiceSeleccionado = indice;
     });
+  }
+
+  Future<void> _cerrarSesion() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      // Opcional: manejar error de logout
+      print('Error al cerrar sesión: $e');
+    }
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginPage()), (route) => false);
+    }
   }
 
   @override
@@ -90,9 +95,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
-            },
+            onPressed: _cerrarSesion,
           ),
         ],
       ),
@@ -117,7 +120,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
   Widget _construirCuerpoSegunIndice(int indice) {
     if (indice == 2) {
-      final controladorTasa = TextEditingController(text: _tasaCambio.toStringAsFixed(2));
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -139,20 +141,28 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 SizedBox(
                   width: 220,
                   child: TextField(
-                    controller: controladorTasa,
+                    controller: _controladorTasa,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(labelText: 'Bs por 1\$'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
                   onPressed: () {
-                    final double? valor = double.tryParse(controladorTasa.text.replaceAll(',', '.'));
+                    final double? valor = double.tryParse(_controladorTasa.text.replaceAll(',', '.'));
                     if (valor != null && valor > 0) {
                       setState(() {
                         _tasaCambio = valor;
                       });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Tasa de cambio actualizada'), backgroundColor: Colors.green),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Valor inválido'), backgroundColor: Colors.red),
+                      );
+                      _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
                     }
                   },
                   child: const Text('Actualizar'),
@@ -196,23 +206,26 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: productos.isEmpty
+            child: _estaCargando
+                ? const Center(child: CircularProgressIndicator())
+                : productos.isEmpty
                 ? Center(
                     child: Text('No hay productos en ${_titulos[indice]}',
                         style: const TextStyle(fontSize: 16)),
                   )
                 : ListView.separated(
                     itemCount: productos.length,
-                    separatorBuilder: (_, __) => const Divider(),
+                    separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (context, i) {
-                      final p = productos[i];
-                      final valorBs = p.precioUsd * _tasaCambio;
+                      final producto = productos[i];
+                      final precioUsd = (producto['precio'] as num?)?.toDouble() ?? 0.0;
+                      final valorBs = precioUsd * _tasaCambio;
                       return ListTile(
-                        title: Text(p.nombre),
+                        title: Text(producto['nombre'] ?? 'Sin nombre'),
                         subtitle: Text(
-                            'Cantidad: ${p.cantidad}    Valor: \$${p.precioUsd.toStringAsFixed(2)} (${valorBs.toStringAsFixed(2)} bs)'),
+                            'Cantidad: ${producto['stock'] ?? 0}    Valor: \$${precioUsd.toStringAsFixed(2)} (${valorBs.toStringAsFixed(2)} bs)'),
                         trailing: const Icon(Icons.edit),
-                        onTap: () => _mostrarDialogoEditarProducto(esComida, i),
+                        onTap: () => _mostrarDialogoEditarProducto(producto, esComida),
                       );
                     },
                   ),
@@ -244,7 +257,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
             onPressed: () async {
               final nombre = controladorNombre.text.trim();
               final descripcion = controladorDescripcion.text.trim();
@@ -264,9 +277,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
                 await _cargarProductos();
 
+                if (!mounted) return;
                 Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Producto guardado'), backgroundColor: Colors.green),
+                );
               } catch (e) {
                 print('Error: $e');
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+                  );
+                }
               }
             },
             child: const Text('Confirmar'),
@@ -276,38 +299,46 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  void _mostrarDialogoEditarProducto(bool esComida, int indice) {
-    final lista = esComida ? _productosComida : _productosBebida;
-    final producto = lista[indice];
-
-    final controladorCantidad = TextEditingController(text: producto.cantidad.toString());
-    final controladorPrecio = TextEditingController(text: producto.precioUsd.toStringAsFixed(2));
+  void _mostrarDialogoEditarProducto(Map<String, dynamic> producto, bool esComida) {
+    final controladorCantidad = TextEditingController(text: (producto['stock'] ?? 0).toString());
+    final controladorPrecio = TextEditingController(text: ((producto['precio'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2));
 
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Editar ${producto.nombre}'),
+        title: Text('Editar ${producto['nombre'] ?? ''}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: controladorCantidad, decoration: const InputDecoration(labelText: 'Cantidad'), keyboardType: TextInputType.number),
-            TextField(controller: controladorPrecio, decoration: const InputDecoration(labelText: 'Valor (USD)'), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+            TextField(controller: controladorPrecio, decoration: const InputDecoration(labelText: 'Precio (USD)'), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
           ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            onPressed: () {
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+            onPressed: () async {
               final int? cantidad = int.tryParse(controladorCantidad.text);
               final double? precio = double.tryParse(controladorPrecio.text.replaceAll(',', '.'));
-              if (cantidad == null || precio == null) return;
+              final int? productoId = producto['producto_id'];
 
-              setState(() {
-                lista[indice] = producto.copiarCon(cantidad: cantidad, precioUsd: precio);
-              });
+              if (cantidad == null || precio == null || productoId == null) {
+                // Opcional: mostrar error
+                return;
+              }
 
-              Navigator.of(context).pop();
+              try {
+                await productoService.actualizarProducto(productoId: productoId, stock: cantidad, precioUsd: precio);
+                await _cargarProductos(); // Recargar para ver los cambios
+                if (!mounted) return;
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto actualizado'), backgroundColor: Colors.green));
+              } catch (e) {
+                if (!mounted) return;
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red));
+              }
             },
             child: const Text('Confirmar'),
           ),

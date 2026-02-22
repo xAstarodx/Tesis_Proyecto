@@ -48,4 +48,22 @@ class ProductoService {
       throw Exception('Error al obtener categorías: $e');
     }
   }
+
+  Future<void> actualizarProducto({
+    required int productoId,
+    required int stock,
+    required double precioUsd,
+  }) async {
+    try {
+      await supabase
+          .from('productos')
+          .update({
+            'stock': stock,
+            'precio': precioUsd,
+          })
+          .eq('producto_id', productoId);
+    } catch (e) {
+      throw Exception('Error al actualizar producto: $e');
+    }
+  }
 }
