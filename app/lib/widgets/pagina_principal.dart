@@ -4,6 +4,7 @@ import 'detalle_item.dart';
 import 'carrito.dart';
 import '../services/supabase_service.dart';
 import 'login.dart';
+import 'mis_pedidos.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -20,6 +21,33 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _loading = true;
   final String _search = '';
   String? _error;
+
+  void _mostrarDetallesPagoMovil() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Datos para Pago Movil'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Banco: Banesco (0134)'),
+              SizedBox(height: 8),
+              Text('Telefono: 0412-1234567'),
+              SizedBox(height: 8),
+              Text('C.I: V-12.345.678'),
+              SizedBox(height: 8),
+              
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -43,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
             'precio': p.precio,
             'precio_bs': p.precio * tasa,
             'descripcion': p.descripcion ?? '',
-            'icono': Icons.fastfood, // Puedes asignar íconos según la categoría o tipo de producto
+            'icono': Icons.fastfood,
             'producto_id': p.productoId,
           };
         }).toList();
@@ -83,6 +111,16 @@ class _MyHomePageState extends State<MyHomePage> {
         title: const Text('Cafetín ISABORES - IUTEPAL'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MisPedidosPage()),
+              );
+            },
+            tooltip: 'Mis Pedidos',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _cerrarSesion,
             tooltip: 'Cerrar sesión',
@@ -91,8 +129,22 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
+        child: Column(
+          children: [
+            ElevatedButton.icon(
+              onPressed: _mostrarDetallesPagoMovil,
+              icon: const Icon(Icons.phone_android),
+              label: const Text('Ver datos para Pago Móvil'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 40),
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
             : (_error != null
                 ? Center(
                     child: Column(
@@ -124,6 +176,9 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                         ],
                       ))),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

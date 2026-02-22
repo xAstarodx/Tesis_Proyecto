@@ -96,7 +96,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               Navigator.of(ctx).pop();
               try {
                 await productoService.eliminarPedido(pedidoId);
-                _cargarProductos(); // Recargar la lista
+                _cargarProductos();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Pedido eliminado'), backgroundColor: Colors.green),
@@ -127,7 +127,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     
     double totalUsd = 0.0;
     
-    // Calcular total para el diálogo
     for (var d in detalles) {
       final cantidad = (d['cantidad'] as num).toDouble();
       final precio = (d['precio_unitario'] as num).toDouble();
@@ -154,8 +153,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 final cantidad = d['cantidad'] as num;
                 final precio = d['precio_unitario'] as num;
                 final subtotal = cantidad * precio;
-                final desc = d['descripcion'] != null && d['descripcion'].toString().isNotEmpty 
-                    ? '\nNota: ${d['descripcion']}' 
+                final desc = d['Descripcion'] != null && d['Descripcion'].toString().isNotEmpty 
+                    ? '\nNota: ${d['Descripcion']}' 
                     : '';
                 
                 return Padding(
@@ -190,7 +189,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
-      // Opcional: manejar error de logout
       print('Error al cerrar sesión: $e');
     }
     if (mounted) {
@@ -234,7 +232,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   }
 
   Widget _construirCuerpoSegunIndice(int indice) {
-    if (indice == 3) { // Montos ahora es el índice 3
+    if (indice == 3) {
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -297,7 +295,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       );
     }
 
-    if (indice == 2) { // Vista de Pedidos
+    if (indice == 2) {
       return _estaCargando
           ? const Center(child: CircularProgressIndicator())
           : _listaPedidos.isEmpty
@@ -310,13 +308,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     final pedido = _listaPedidos[i];
                     final detalles = (pedido['detalle_pedido'] as List<dynamic>? ?? []);
                     
-                    // Calcular total manualmente ya que no está en la tabla pedido
                     double totalUsd = 0.0;
                     final detalleTexto = detalles.map((d) {
                       final prod = d['productos'];
                       final subtotal = (d['cantidad'] as num) * (d['precio_unitario'] as num);
                       totalUsd += subtotal;
-                      final desc = d['descripcion'] != null && d['descripcion'].toString().isNotEmpty ? ' (${d['descripcion']})' : '';
+                      final desc = d['Descripcion'] != null && d['Descripcion'].toString().isNotEmpty ? ' (${d['Descripcion']})' : '';
                       return '${prod?['nombre'] ?? 'Producto'} x${d['cantidad']}$desc';
                     }).join(', ');
 
@@ -494,13 +491,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               final int? productoId = producto['producto_id'];
 
               if (cantidad == null || precio == null || productoId == null) {
-                // Opcional: mostrar error
                 return;
               }
 
               try {
                 await productoService.actualizarProducto(productoId: productoId, stock: cantidad, precioUsd: precio);
-                await _cargarProductos(); // Recargar para ver los cambios
+                await _cargarProductos();
                 if (!mounted) return;
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto actualizado'), backgroundColor: Colors.green));

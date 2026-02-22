@@ -10,27 +10,18 @@ class CarritoPage extends StatefulWidget {
 }
 
 class _CarritoPageState extends State<CarritoPage> {
-  final TextEditingController _mensajePedidoController = TextEditingController();
   final _supabaseService = SupabaseService();
-
-  @override
-  void dispose() {
-    _mensajePedidoController.dispose();
-    super.dispose();
-  }
 
   void _enviarAlAdmin(List<Map<String, dynamic>> items) async {
     final pedidoResumen = items.map((it) {
       final qty = (it['cantidad'] ?? 1) as int;
       final precio = (it['precio'] as num).toDouble();
       final precioBs = (it['precio_bs'] as num?)?.toDouble() ?? 0.0;
-      final msg = (it['mensaje'] ?? '') as String;
+      final msg = (it['mensaje'] as String?)?.trim() ?? '';
       return '${it['nombre']} x$qty - \$${precio.toStringAsFixed(2)} (Bs ${precioBs.toStringAsFixed(2)})${msg.isNotEmpty ? ' (msg: $msg)' : ''}';
     }).join('\n');
 
-    final orderMsg = _mensajePedidoController.text.trim();
-
-    final contenido = 'Pedido:\n$pedidoResumen\n\nMensaje pedido: $orderMsg';
+    final contenido = 'Pedido:\n$pedidoResumen';
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -52,7 +43,6 @@ class _CarritoPageState extends State<CarritoPage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido enviado exitosamente'), backgroundColor: Colors.green));
         CartModel.clear();
-        _mensajePedidoController.clear();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar pedido: $e'), backgroundColor: Colors.red));
       }
@@ -138,15 +128,6 @@ class _CarritoPageState extends State<CarritoPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text('Total: \$${totalUsd.toStringAsFixed(2)} / Bs ${totalBs.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _mensajePedidoController,
-                      decoration: const InputDecoration(
-                        labelText: 'Mensaje (opcional)',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 2,
-                    ),
                     const SizedBox(height: 8),
                     ElevatedButton(
                       onPressed: () => _enviarAlAdmin(items),

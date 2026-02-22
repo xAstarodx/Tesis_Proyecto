@@ -91,7 +91,6 @@ class ProductoService {
           .maybeSingle();
       
       if (response == null) return 1.0;
-      // (response['valor'] as num) asegura que funcione si viene como int o double
       return (response['valor'] as num).toDouble();
     } catch (e) {
       print('Error obteniendo tasa: $e');
@@ -100,9 +99,7 @@ class ProductoService {
   }
 
   Future<void> actualizarTasaCambio(double nuevaTasa) async {
-    // Primero borramos el registro existente
     await supabase.from('configuracion').delete().eq('clave', 'tasa_usd_bs');
-    // Luego insertamos el nuevo valor
     await supabase.from('configuracion').insert(
       {'clave': 'tasa_usd_bs', 'valor': nuevaTasa},
     );

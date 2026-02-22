@@ -6,10 +6,8 @@ class SupabaseService {
 
   Future<List<Producto>> obtenerProductos() async {
     try {
-      // Supabase v2: .select() devuelve directamente List<Map<String, dynamic>>
       final data = await _cliente.from('productos').select();
       
-      // Convertimos la respuesta a una lista de objetos Producto
       return (data as List<dynamic>)
           .map((e) => Producto.fromMap(e as Map<String, dynamic>))
           .toList();
@@ -25,7 +23,7 @@ class SupabaseService {
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error al obtener categorías: $e');
-      return []; // Retorna lista vacía si falla o no existe la tabla
+      return [];
     }
   }
 
@@ -34,7 +32,6 @@ class SupabaseService {
       'nombre': nombre,
       'precio': precio,
       'categoria_id': categoriaId,
-      // 'imagen_url': imagenUrl, // Descomentar si manejas imágenes
     });
   }
 
@@ -55,7 +52,6 @@ class SupabaseService {
   Future<AuthResponse> registrarUsuario(String email, String password, {String? nombre, String? usuario}) async {
     final metadatos = <String, dynamic>{};
     
-    // Supabase usa 'full_name' por convención
     if (nombre != null) {
       metadatos['nombre'] = nombre;
     }
@@ -98,21 +94,17 @@ class SupabaseService {
     final email = user?.email;
     if (user == null || email == null) throw Exception('Debes iniciar sesión');
 
-    // 1. Buscamos el ID del usuario en la tabla personalizada usando el correo
-    // Esto evita errores de tipo (UUID vs BIGINT) al crear el pedido
     final usuarioData = await _cliente.from('usuario').select('usuario_id').eq('correo', email).maybeSingle();
     if (usuarioData == null) throw Exception('Usuario no encontrado en la base de datos');
     final usuarioId = usuarioData['usuario_id'];
 
-    // 2. Crear el Pedido
     final pedidoRes = await _cliente.from('pedido').insert({
       'usuario_id': usuarioId,
-      'estado_id': 1, // Asumimos 1 = Pendiente
+      'estado_id': 1,
     }).select('pedido_id').single();
     
     final pedidoId = pedidoRes['pedido_id'];
 
-    // 3. Insertar Detalles
     final detalles = items.map((item) => {
       'pedido_id': pedidoId,
       'producto_id': item['producto_id'],
@@ -122,5 +114,39 @@ class SupabaseService {
     }).toList();
 
     await _cliente.from('detalle_pedido').insert(detalles);
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerMisPedidos() async {
+    final user = _cliente.auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) return [];
+
+    try {
+      final usuarioData = await _cliente.from('usuario').select('usuario_id').eq('correo', email).maybeSingle();
+      if (usuarioData == null) return [];
+      final usuarioId = usuarioData['usuario_id'];
+
+      final data = await _cliente
+          .from('pedido')
+          .select('''
+            *,
+            estado (
+              etiqueta
+            ),
+            detalle_pedido (
+              *,
+              productos (
+                nombre
+              )
+            )
+          ''')
+          .eq('usuario_id', usuarioId)
+          .order('fecha_creacion', ascending: false);
+      
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('Error al obtener mis pedidos: $e');
+      return [];
+    }
   }
 }
