@@ -38,6 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
         correo,
         _controladorContrasena.text.trim(),
         usuario: usuario,
+        nombre: usuario,
       );
       
       if (mounted) {

@@ -107,4 +107,31 @@ class ProductoService {
       {'clave': 'tasa_usd_bs', 'valor': nuevaTasa},
     );
   }
+
+  Future<List<Map<String, dynamic>>> obtenerPedidos() async {
+    try {
+      final data = await supabase
+          .from('pedido')
+          .select('''
+            *,
+            usuario (
+              nombre,
+              correo
+            ),
+            detalle_pedido(*, productos(*))
+          ''')
+          .order('fecha_creacion', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      throw Exception('Error al obtener pedidos: $e');
+    }
+  }
+
+  Future<void> eliminarPedido(int pedidoId) async {
+    try {
+      await supabase.from('pedido').delete().eq('pedido_id', pedidoId);
+    } catch (e) {
+      throw Exception('Error al eliminar pedido: $e');
+    }
+  }
 }

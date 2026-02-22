@@ -12,10 +12,18 @@ class DetalleItem extends StatefulWidget {
 
 class _DetalleItemState extends State<DetalleItem> {
   int _cantidad = 1;
+  final _controladorNota = TextEditingController();
+
+  @override
+  void dispose() {
+    _controladorNota.dispose();
+    super.dispose();
+  }
 
   void _agregar() {
     final mapa = Map<String, dynamic>.from(widget.item);
     mapa['cantidad'] = _cantidad;
+    mapa['mensaje'] = _controladorNota.text.trim();
     CartModel.add(mapa);
     Navigator.pop(context);
     if (widget.onAdd != null) widget.onAdd!();
@@ -56,6 +64,15 @@ class _DetalleItemState extends State<DetalleItem> {
                 onPressed: () => setState(() { _cantidad++; }),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controladorNota,
+            decoration: const InputDecoration(
+              labelText: 'Nota / Descripción (opcional)',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 2,
           ),
           const SizedBox(height: 12),
           Row(

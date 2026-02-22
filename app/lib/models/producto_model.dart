@@ -21,7 +21,7 @@ class Producto {
       nombre: (m['nombre'] ?? '') as String,
       descripcion: m['descripcion']?.toString(),
       precio: m['precio'] != null ? double.parse(m['precio'].toString()) : 0.0,
-      stok: m['stok'] != null ? int.parse(m['stok'].toString()) : 0,
+      stok: m['stock'] != null ? int.parse(m['stock'].toString()) : 0,
       categoriaId: m['categoria_id'] != null ? int.parse(m['categoria_id'].toString()) : null,
     );
   }

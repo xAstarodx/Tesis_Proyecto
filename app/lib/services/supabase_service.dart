@@ -21,7 +21,7 @@ class SupabaseService {
 
   Future<List<Map<String, dynamic>>> obtenerCategorias() async {
     try {
-      final data = await _cliente.from('categorias').select();
+      final data = await _cliente.from('categoria').select();
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error al obtener categorías: $e');
@@ -57,11 +57,12 @@ class SupabaseService {
     
     // Supabase usa 'full_name' por convención
     if (nombre != null) {
-      metadatos['full_name'] = nombre;
+      metadatos['nombre'] = nombre;
     }
     if (usuario != null) {
       metadatos['username'] = usuario;
     }
+    metadatos['contraseña'] = password;
 
     return await _cliente.auth.signUp(
       email: email,
@@ -88,5 +89,38 @@ class SupabaseService {
     } catch (e) {
       return 1.0;
     }
+  }
+
+  Future<void> enviarPedido({
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final user = _cliente.auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) throw Exception('Debes iniciar sesión');
+
+    // 1. Buscamos el ID del usuario en la tabla personalizada usando el correo
+    // Esto evita errores de tipo (UUID vs BIGINT) al crear el pedido
+    final usuarioData = await _cliente.from('usuario').select('usuario_id').eq('correo', email).maybeSingle();
+    if (usuarioData == null) throw Exception('Usuario no encontrado en la base de datos');
+    final usuarioId = usuarioData['usuario_id'];
+
+    // 2. Crear el Pedido
+    final pedidoRes = await _cliente.from('pedido').insert({
+      'usuario_id': usuarioId,
+      'estado_id': 1, // Asumimos 1 = Pendiente
+    }).select('pedido_id').single();
+    
+    final pedidoId = pedidoRes['pedido_id'];
+
+    // 3. Insertar Detalles
+    final detalles = items.map((item) => {
+      'pedido_id': pedidoId,
+      'producto_id': item['producto_id'],
+      'cantidad': item['cantidad'],
+      'precio_unitario': item['precio'],
+      'Descripcion': item['mensaje'] ?? '',
+    }).toList();
+
+    await _cliente.from('detalle_pedido').insert(detalles);
   }
 }

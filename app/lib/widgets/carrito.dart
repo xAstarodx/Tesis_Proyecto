@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/cart_model.dart';
+import '../services/supabase_service.dart';
 
 class CarritoPage extends StatefulWidget {
   const CarritoPage({super.key});
@@ -10,6 +11,7 @@ class CarritoPage extends StatefulWidget {
 
 class _CarritoPageState extends State<CarritoPage> {
   final TextEditingController _mensajePedidoController = TextEditingController();
+  final _supabaseService = SupabaseService();
 
   @override
   void dispose() {
@@ -43,9 +45,17 @@ class _CarritoPageState extends State<CarritoPage> {
     );
 
     if (confirm == true) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido enviado ')));
-      CartModel.clear();
-      _mensajePedidoController.clear();
+      try {
+        await _supabaseService.enviarPedido(
+          items: items,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido enviado exitosamente'), backgroundColor: Colors.green));
+        CartModel.clear();
+        _mensajePedidoController.clear();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar pedido: $e'), backgroundColor: Colors.red));
+      }
     }
   }
 
