@@ -40,6 +40,21 @@ class ProductoService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> obtenerTodosLosProductos() async {
+    try {
+      final data = await supabase
+          .from('productos')
+          .select()
+          .order('categoria_id', ascending: true)
+          .order('nombre', ascending: true);
+
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      print('ERROR CRÍTICO en Supabase: $e');
+      throw Exception('Error al obtener todos los productos: $e');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> obtenerCategorias() async {
     try {
       final data = await supabase.from('categoria').select();
@@ -65,5 +80,31 @@ class ProductoService {
     } catch (e) {
       throw Exception('Error al actualizar producto: $e');
     }
+  }
+
+  Future<double> obtenerTasaCambio() async {
+    try {
+      final response = await supabase
+          .from('configuracion')
+          .select('valor')
+          .eq('clave', 'tasa_usd_bs')
+          .maybeSingle();
+      
+      if (response == null) return 1.0;
+      // (response['valor'] as num) asegura que funcione si viene como int o double
+      return (response['valor'] as num).toDouble();
+    } catch (e) {
+      print('Error obteniendo tasa: $e');
+      return 1.0;
+    }
+  }
+
+  Future<void> actualizarTasaCambio(double nuevaTasa) async {
+    // Primero borramos el registro existente
+    await supabase.from('configuracion').delete().eq('clave', 'tasa_usd_bs');
+    // Luego insertamos el nuevo valor
+    await supabase.from('configuracion').insert(
+      {'clave': 'tasa_usd_bs', 'valor': nuevaTasa},
+    );
   }
 }

@@ -74,4 +74,19 @@ class SupabaseService {
     return await _cliente.auth
         .signInWithPassword(email: email, password: password);
   }
+
+  Future<double> obtenerTasaCambio() async {
+    try {
+      final response = await _cliente
+          .from('configuracion')
+          .select('valor')
+          .eq('clave', 'tasa_usd_bs')
+          .maybeSingle();
+      
+      if (response == null) return 1.0;
+      return (response['valor'] as num).toDouble();
+    } catch (e) {
+      return 1.0;
+    }
+  }
 }

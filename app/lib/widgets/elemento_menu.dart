@@ -11,7 +11,15 @@ class ElementoMenu extends StatelessWidget {
       child: ListTile(
         leading: Icon(item['icono']),
         title: Text(item['nombre']),
-        subtitle: Text('\$${(item['precio'] as num).round()}'),
+        subtitle: RichText(
+          text: TextSpan(
+            style: DefaultTextStyle.of(context).style,
+            children: [
+              TextSpan(text: '\$${(item['precio'] as num).toStringAsFixed(2)} ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              TextSpan(text: '(Bs ${(item['precio_bs'] as num).toStringAsFixed(2)})', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            ],
+          ),
+        ),
         onTap: onTap,
       ),
     );

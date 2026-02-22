@@ -47,9 +47,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     try {
       final comida = await productoService.obtenerProductosPorCategoria(2);
       final bebida = await productoService.obtenerProductosPorCategoria(1);
+      final tasa = await productoService.obtenerTasaCambio();
+
       setState(() {
         _productosComida = comida;
         _productosBebida = bebida;
+        _tasaCambio = tasa;
+        _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
       });
     } catch (e) {
       print('Error cargando productos: $e');
@@ -149,15 +153,23 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 const SizedBox(width: 12),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-                  onPressed: () {
+                  onPressed: () async {
                     final double? valor = double.tryParse(_controladorTasa.text.replaceAll(',', '.'));
                     if (valor != null && valor > 0) {
-                      setState(() {
-                        _tasaCambio = valor;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tasa de cambio actualizada'), backgroundColor: Colors.green),
-                      );
+                      try {
+                        await productoService.actualizarTasaCambio(valor);
+                        setState(() {
+                          _tasaCambio = valor;
+                        });
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Tasa de cambio actualizada'), backgroundColor: Colors.green),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+                        );
+                      }
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Valor inválido'), backgroundColor: Colors.red),

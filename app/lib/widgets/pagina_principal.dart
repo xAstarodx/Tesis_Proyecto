@@ -34,12 +34,14 @@ class _MyHomePageState extends State<MyHomePage> {
         _error = null;
       });
       final productos = await _svc.obtenerProductos();
+      final tasa = await _svc.obtenerTasaCambio();
       setState(() {
         _menuItems = productos.map((p) {
           
           return {
             'nombre': p.nombre,
             'precio': p.precio,
+            'precio_bs': p.precio * tasa,
             'descripcion': p.descripcion ?? '',
             'icono': Icons.fastfood, // Puedes asignar íconos según la categoría o tipo de producto
             'producto_id': p.productoId,

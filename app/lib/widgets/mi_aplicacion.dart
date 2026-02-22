@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // `MaterialApp` es un widget que envuelve varias funcionalidades que son comunes en las apps de Material Design.
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       // Título de la aplicación, usado por el sistema operativo.
       title: 'APP de Pedidos',
       // `theme` define el aspecto visual de la aplicación.
