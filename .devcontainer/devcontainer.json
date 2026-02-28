@@ -1,15 +1,29 @@
 {
-  "name": "Flutter Dev Environment",
+  "name": "Flutter Linux Full Desktop",
   "image": "ghcr.io/cirruslabs/flutter:stable",
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "version": "latest"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
         "Dart-Code.flutter",
-        "Dart-Code.dart-code",
-        "formulahendry.terminal"
+        "Dart-Code.dart-code"
       ]
     }
   },
   "remoteUser": "root",
-  "postCreateCommand": "flutter doctor && flutter precache"
+  "postCreateCommand": "apt-get update && apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++6 libsecret-1-dev libjsoncpp-dev && flutter config --enable-linux-desktop && flutter doctor",
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": {
+      "label": "Escritorio Linux (VNC)",
+      "onAutoForward": "notify"
+    }
+  },
+  "containerEnv": {
+    "DISPLAY": ":1"
+  }
 }
