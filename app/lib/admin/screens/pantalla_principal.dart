@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/producto_service.dart';
 import '../../widgets/login.dart';
@@ -100,6 +102,44 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Pedido eliminado'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmarEliminarProducto(int productoId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar Producto'),
+        content: const Text('¿Estás seguro de que deseas eliminar este producto?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                await productoService.eliminarProducto(productoId);
+                await _cargarProductos();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Producto eliminado'), backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
@@ -391,8 +431,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         title: Text(producto['nombre'] ?? 'Sin nombre'),
                         subtitle: Text(
                             'Cantidad: ${producto['stock'] ?? 0}    Valor: \$${precioUsd.toStringAsFixed(2)} (${valorBs.toStringAsFixed(2)} bs)'),
-                        trailing: const Icon(Icons.edit),
-                        onTap: () => _mostrarDialogoEditarProducto(producto, esComida),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _mostrarDialogoEditarProducto(producto, esComida),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _confirmarEliminarProducto(producto['producto_id']),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -407,108 +458,204 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     final controladorDescripcion = TextEditingController();
     final controladorPrecio = TextEditingController();
     final controladorCantidad = TextEditingController();
+    File? imagenSeleccionada;
 
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Añadir producto'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: controladorNombre, decoration: const InputDecoration(labelText: 'Nombre')),
-            TextField(controller: controladorDescripcion, decoration: const InputDecoration(labelText: 'Descripción')),
-            TextField(controller: controladorCantidad, decoration: const InputDecoration(labelText: 'Cantidad'), keyboardType: TextInputType.number),
-            TextField(controller: controladorPrecio, decoration: const InputDecoration(labelText: 'Precio (USD)'), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-            onPressed: () async {
-              final nombre = controladorNombre.text.trim();
-              final descripcion = controladorDescripcion.text.trim();
-              final cantidad = int.tryParse(controladorCantidad.text);
-              final precio = double.tryParse(controladorPrecio.text.replaceAll(',', '.'));
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Añadir producto'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                    if (pickedFile != null) {
+                      setStateDialog(() {
+                        imagenSeleccionada = File(pickedFile.path);
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[200],
+                    ),
+                    child: imagenSeleccionada != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(imagenSeleccionada!, fit: BoxFit.cover),
+                          )
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.camera_alt, color: Colors.grey, size: 40),
+                              Text('Seleccionar Imagen'),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(controller: controladorNombre, decoration: const InputDecoration(labelText: 'Nombre')),
+                TextField(controller: controladorDescripcion, decoration: const InputDecoration(labelText: 'Descripción')),
+                TextField(controller: controladorCantidad, decoration: const InputDecoration(labelText: 'Cantidad'), keyboardType: TextInputType.number),
+                TextField(controller: controladorPrecio, decoration: const InputDecoration(labelText: 'Precio (USD)'), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+              onPressed: () async {
+                final nombre = controladorNombre.text.trim();
+                final descripcion = controladorDescripcion.text.trim();
+                final cantidad = int.tryParse(controladorCantidad.text);
+                final precio = double.tryParse(controladorPrecio.text.replaceAll(',', '.'));
 
-              if (nombre.isEmpty || cantidad == null || precio == null) return;
+                if (nombre.isEmpty || cantidad == null || precio == null) return;
 
-              try {
-                await productoService.guardarProducto(
-                  nombre: nombre,
-                  descripcion: descripcion,
-                  precioUsd: precio,
-                  stock: cantidad,
-                  categoriaId: esComida ? 2 : 1,
-                );
+                try {
+                  await productoService.guardarProducto(
+                    nombre: nombre,
+                    descripcion: descripcion,
+                    precioUsd: precio,
+                    stock: cantidad,
+                    categoriaId: esComida ? 2 : 1,
+                    imagenFile: imagenSeleccionada,
+                  );
 
-                await _cargarProductos();
+                  await _cargarProductos();
 
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Producto guardado'), backgroundColor: Colors.green),
-                );
-              } catch (e) {
-                print('Error: $e');
-                if (mounted) {
+                  if (!mounted) return;
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+                    const SnackBar(content: Text('Producto guardado'), backgroundColor: Colors.green),
                   );
+                } catch (e) {
+                  print('Error: $e');
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+                    );
+                  }
                 }
-              }
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
+              },
+              child: const Text('Confirmar'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _mostrarDialogoEditarProducto(Map<String, dynamic> producto, bool esComida) {
+    final controladorNombre = TextEditingController(text: producto['nombre'] ?? '');
+    final controladorDescripcion = TextEditingController(text: producto['descripcion'] ?? '');
     final controladorCantidad = TextEditingController(text: (producto['stock'] ?? 0).toString());
     final controladorPrecio = TextEditingController(text: ((producto['precio'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2));
+    File? imagenSeleccionada;
+    final String? imagenActualUrl = producto['imagen_url'];
 
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Editar ${producto['nombre'] ?? ''}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: controladorCantidad, decoration: const InputDecoration(labelText: 'Cantidad'), keyboardType: TextInputType.number),
-            TextField(controller: controladorPrecio, decoration: const InputDecoration(labelText: 'Precio (USD)'), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: Text('Editar ${producto['nombre'] ?? ''}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                    if (pickedFile != null) {
+                      setStateDialog(() {
+                        imagenSeleccionada = File(pickedFile.path);
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[200],
+                    ),
+                    child: imagenSeleccionada != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(imagenSeleccionada!, fit: BoxFit.cover),
+                          )
+                        : (imagenActualUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(imagenActualUrl, fit: BoxFit.cover),
+                              )
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.camera_alt, color: Colors.grey, size: 40),
+                                  Text('Cambiar Imagen'),
+                                ],
+                              )),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(controller: controladorNombre, decoration: const InputDecoration(labelText: 'Nombre')),
+                TextField(controller: controladorDescripcion, decoration: const InputDecoration(labelText: 'Descripción')),
+                TextField(controller: controladorCantidad, decoration: const InputDecoration(labelText: 'Cantidad'), keyboardType: TextInputType.number),
+                TextField(controller: controladorPrecio, decoration: const InputDecoration(labelText: 'Precio (USD)'), keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+              onPressed: () async {
+                final nombre = controladorNombre.text.trim();
+                final descripcion = controladorDescripcion.text.trim();
+                final int? cantidad = int.tryParse(controladorCantidad.text);
+                final double? precio = double.tryParse(controladorPrecio.text.replaceAll(',', '.'));
+                final int? productoId = producto['producto_id'];
+
+                if (nombre.isEmpty || cantidad == null || precio == null || productoId == null) {
+                  return;
+                }
+
+                try {
+                  await productoService.actualizarProducto(
+                    productoId: productoId,
+                    nombre: nombre,
+                    descripcion: descripcion,
+                    stock: cantidad,
+                    precioUsd: precio,
+                    imagenFile: imagenSeleccionada,
+                  );
+                  await _cargarProductos();
+                  if (!mounted) return;
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto actualizado'), backgroundColor: Colors.green));
+                } catch (e) {
+                  if (!mounted) return;
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red));
+                }
+              },
+              child: const Text('Confirmar'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-            onPressed: () async {
-              final int? cantidad = int.tryParse(controladorCantidad.text);
-              final double? precio = double.tryParse(controladorPrecio.text.replaceAll(',', '.'));
-              final int? productoId = producto['producto_id'];
-
-              if (cantidad == null || precio == null || productoId == null) {
-                return;
-              }
-
-              try {
-                await productoService.actualizarProducto(productoId: productoId, stock: cantidad, precioUsd: precio);
-                await _cargarProductos();
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Producto actualizado'), backgroundColor: Colors.green));
-              } catch (e) {
-                if (!mounted) return;
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red));
-              }
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
       ),
     );
   }

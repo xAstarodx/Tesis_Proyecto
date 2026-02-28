@@ -5,6 +5,7 @@ class Producto {
   final double precio;
   final int stok;
   final int? categoriaId;
+  final String? imagenUrl;
 
   Producto({
     required this.productoId,
@@ -13,6 +14,7 @@ class Producto {
     required this.precio,
     required this.stok,
     this.categoriaId,
+    this.imagenUrl,
   });
 
   factory Producto.fromMap(Map<String, dynamic> m) {
@@ -23,6 +25,7 @@ class Producto {
       precio: m['precio'] != null ? double.parse(m['precio'].toString()) : 0.0,
       stok: m['stock'] != null ? int.parse(m['stock'].toString()) : 0,
       categoriaId: m['categoria_id'] != null ? int.parse(m['categoria_id'].toString()) : null,
+      imagenUrl: m['imagen_url']?.toString(),
     );
   }
 

@@ -73,6 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
             'descripcion': p.descripcion ?? '',
             'icono': Icons.fastfood,
             'producto_id': p.productoId,
+            'imagen_url': p.imagenUrl,
           };
         }).toList();
         _loading = false;

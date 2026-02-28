@@ -40,7 +40,13 @@ class _DetalleItemState extends State<DetalleItem> {
         children: [
           Row(
             children: [
-              Icon(item['icono'], size: 36),
+              item['imagen_url'] != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: Image.network(item['imagen_url'],
+                          width: 60, height: 60, fit: BoxFit.cover),
+                    )
+                  : Icon(item['icono'], size: 36),
               const SizedBox(width: 12),
               Text(item['nombre'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const Spacer(),

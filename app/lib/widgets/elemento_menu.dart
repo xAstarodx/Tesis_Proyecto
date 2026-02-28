@@ -9,7 +9,13 @@ class ElementoMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: Icon(item['icono']),
+        leading: item['imagen_url'] != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.network(item['imagen_url'],
+                    width: 50, height: 50, fit: BoxFit.cover),
+              )
+            : Icon(item['icono']),
         title: Text(item['nombre']),
         subtitle: RichText(
           text: TextSpan(
