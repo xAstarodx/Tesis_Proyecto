@@ -11,5 +11,8 @@
     }
   },
   "remoteUser": "root",
-  "postCreateCommand": "flutter doctor && flutter precache"
+  "postCreateCommand": "flutter doctor && flutter precache",
+  "features": {
+    "ghcr.io/bascodes/devcontainer-features/desktop:0": {}
+  }
 }
