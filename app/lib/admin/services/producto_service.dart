@@ -42,7 +42,7 @@ class ProductoService {
         'precio': precioUsd,
         'stock': stock,
         'categoria_id': categoriaId,
-        'imagen_url': ?imagenUrl,
+        'imagen_url': imagenUrl,
       });
     } catch (e) {
       throw Exception('Error al guardar producto: $e');
@@ -131,7 +131,7 @@ class ProductoService {
             'descripcion': descripcion,
             'stock': stock,
             'precio': precioUsd,
-            'imagen_url': ?imagenUrl,
+            if (imagenUrl != null) 'imagen_url': imagenUrl,
           })
           .eq('producto_id', productoId);
     } catch (e) {
@@ -171,6 +171,9 @@ class ProductoService {
           .from('pedido')
           .select('''
             *,
+            estado (
+              etiqueta
+            ),
             usuario (
               nombre,
               correo
@@ -181,6 +184,17 @@ class ProductoService {
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       throw Exception('Error al obtener pedidos: $e');
+    }
+  }
+
+  Future<void> actualizarEstadoPedido(int pedidoId, int nuevoEstadoId) async {
+    try {
+      await supabase
+          .from('pedido')
+          .update({'estado_id': nuevoEstadoId})
+          .eq('pedido_id', pedidoId);
+    } catch (e) {
+      throw Exception('Error al actualizar el estado del pedido: $e');
     }
   }
 

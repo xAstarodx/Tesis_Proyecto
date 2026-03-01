@@ -42,9 +42,9 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> obtenerPedidos() async {
     try {
       final data = await _cliente
-          .from('pedidos')
+          .from('pedido')
           .select()
-          .order('created_at', ascending: false);
+          .order('fecha_creacion', ascending: false);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error al obtener pedidos: $e');
@@ -116,8 +116,9 @@ class SupabaseService {
         .select('usuario_id')
         .eq('correo', email)
         .maybeSingle();
-    if (usuarioData == null)
+    if (usuarioData == null) {
       throw Exception('Usuario no encontrado en la base de datos');
+    }
     final usuarioId = usuarioData['usuario_id'];
 
     final pedidoRes = await _cliente
@@ -145,6 +146,43 @@ class SupabaseService {
         .toList();
 
     await _cliente.from('detalle_pedido').insert(detalles);
+  }
+
+  Future<int?> getCurrentUserId() async {
+    final user = _cliente.auth.currentUser;
+    if (user == null || user.email == null) return null;
+    try {
+      final usuarioData = await _cliente
+          .from('usuario')
+          .select('usuario_id')
+          .eq('correo', user.email!)
+          .single();
+      return usuarioData['usuario_id'] as int?;
+    } catch (e) {
+      print('Error getting current user ID: $e');
+      return null;
+    }
+  }
+
+  RealtimeChannel subscribeToPedidos({
+    required int userId,
+    required void Function(PostgresChangePayload payload) onUpdate,
+  }) {
+    final channel = _cliente.channel('public:pedido:usuario_id=eq.$userId');
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'pedido',
+          callback: onUpdate,
+        )
+        .subscribe();
+
+    return channel;
+  }
+
+  Future<void> unsubscribeFromChannel(RealtimeChannel channel) async {
+    await _cliente.removeChannel(channel);
   }
 
   Future<List<Map<String, dynamic>>> obtenerMisPedidos() async {

@@ -283,6 +283,73 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   color: Colors.blue,
                 ),
               ),
+              const Divider(),
+              const Text(
+                'Cambiar Estado:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Listo'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: pedido['estado_id'] == 2
+                        ? null
+                        : () async {
+                            try {
+                              await productoService.actualizarEstadoPedido(
+                                pedido['pedido_id'],
+                                2,
+                              );
+                              Navigator.of(ctx).pop();
+                              _cargarProductos();
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Cancelar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: pedido['estado_id'] == 3
+                        ? null
+                        : () async {
+                            try {
+                              await productoService.actualizarEstadoPedido(
+                                pedido['pedido_id'],
+                                3,
+                              );
+                              Navigator.of(ctx).pop();
+                              _cargarProductos();
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -470,11 +537,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     : '';
                 final cliente = pedido['usuario']?['nombre'] ?? 'Desconocido';
                 final horaRecogida = pedido['hora_recogida'] ?? 'Sin hora';
+                final estado = pedido['estado']?['etiqueta'] ?? 'Pendiente';
 
                 return ListTile(
                   title: Text('Cliente: $cliente'),
                   subtitle: Text(
-                    '$detalleTexto\n\nFecha: $fecha\nHora Recogida: $horaRecogida',
+                    'Estado: $estado\n$detalleTexto\n\nFecha: $fecha\nHora Recogida: $horaRecogida',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -491,7 +559,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       ),
                     ],
                   ),
-                  isThreeLine: true,
+                  isThreeLine: false,
                   onTap: () => _mostrarDetallePedido(pedido),
                 );
               },
@@ -678,8 +746,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   controladorPrecio.text.replaceAll(',', '.'),
                 );
 
-                if (nombre.isEmpty || cantidad == null || precio == null)
+                if (nombre.isEmpty || cantidad == null || precio == null) {
                   return;
+                }
 
                 try {
                   await productoService.guardarProducto(

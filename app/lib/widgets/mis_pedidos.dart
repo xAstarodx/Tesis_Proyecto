@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MisPedidosPage extends StatefulWidget {
   const MisPedidosPage({super.key});
@@ -12,11 +14,59 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
   final _supabaseService = SupabaseService();
   List<Map<String, dynamic>> _pedidos = [];
   bool _cargando = true;
+  final _audioPlayer = AudioPlayer();
+  RealtimeChannel? _pedidosChannel;
 
   @override
   void initState() {
     super.initState();
     _cargarPedidos();
+    _suscribirACambios();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    if (_pedidosChannel != null) {
+      _supabaseService.unsubscribeFromChannel(_pedidosChannel!);
+    }
+    super.dispose();
+  }
+
+  void _reproducirSonidoNotificacion() {
+    _audioPlayer.play(AssetSource('sounds/notification.mp3'));
+  }
+
+  Future<void> _suscribirACambios() async {
+    final userId = await _supabaseService.getCurrentUserId();
+    if (userId == null || !mounted) return;
+
+    _pedidosChannel = _supabaseService.subscribeToPedidos(
+      userId: userId,
+      onUpdate: (payload) {
+        final newRecord = payload.newRecord;
+        final oldRecord = payload.oldRecord;
+
+        if (newRecord['estado_id'] == 2 && oldRecord['estado_id'] != 2) {
+          _reproducirSonidoNotificacion();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '¡Tu pedido #${newRecord['pedido_id']} está listo para recoger!',
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+        // Recargar la lista para mostrar el estado actualizado
+        if (mounted) {
+          _cargarPedidos();
+        }
+      },
+    );
   }
 
   Future<void> _cargarPedidos() async {
