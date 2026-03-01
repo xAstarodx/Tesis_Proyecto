@@ -20,12 +20,16 @@ class ProductoService {
         final fileExt = imagenFile.path.split('.').last;
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
         final filePath = fileName;
-        await supabase.storage.from('imagenes_productos').uploadBinary(
-          filePath,
-          bytes,
-          fileOptions: FileOptions(contentType: 'image/$fileExt'),
-        );
-        imagenUrl = supabase.storage.from('imagenes_productos').getPublicUrl(filePath);
+        await supabase.storage
+            .from('imagenes_productos')
+            .uploadBinary(
+              filePath,
+              bytes,
+              fileOptions: FileOptions(contentType: 'image/$fileExt'),
+            );
+        imagenUrl = supabase.storage
+            .from('imagenes_productos')
+            .getPublicUrl(filePath);
       } catch (e) {
         print('Error subiendo imagen: $e');
       }
@@ -38,14 +42,16 @@ class ProductoService {
         'precio': precioUsd,
         'stock': stock,
         'categoria_id': categoriaId,
-        if (imagenUrl != null) 'imagen_url': imagenUrl,
+        'imagen_url': ?imagenUrl,
       });
     } catch (e) {
       throw Exception('Error al guardar producto: $e');
     }
   }
 
-  Future<List<Map<String, dynamic>>> obtenerProductosPorCategoria(int categoriaId) async {
+  Future<List<Map<String, dynamic>>> obtenerProductosPorCategoria(
+    int categoriaId,
+  ) async {
     try {
       print('Consultando Supabase para categoría ID: $categoriaId');
       final data = await supabase
@@ -102,12 +108,16 @@ class ProductoService {
         final fileExt = imagenFile.path.split('.').last;
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
         final filePath = fileName;
-        await supabase.storage.from('imagenes_productos').uploadBinary(
-          filePath,
-          bytes,
-          fileOptions: FileOptions(contentType: 'image/$fileExt'),
-        );
-        imagenUrl = supabase.storage.from('imagenes_productos').getPublicUrl(filePath);
+        await supabase.storage
+            .from('imagenes_productos')
+            .uploadBinary(
+              filePath,
+              bytes,
+              fileOptions: FileOptions(contentType: 'image/$fileExt'),
+            );
+        imagenUrl = supabase.storage
+            .from('imagenes_productos')
+            .getPublicUrl(filePath);
       } catch (e) {
         print('Error subiendo imagen: $e');
       }
@@ -121,7 +131,7 @@ class ProductoService {
             'descripcion': descripcion,
             'stock': stock,
             'precio': precioUsd,
-            if (imagenUrl != null) 'imagen_url': imagenUrl,
+            'imagen_url': ?imagenUrl,
           })
           .eq('producto_id', productoId);
     } catch (e) {
@@ -136,7 +146,7 @@ class ProductoService {
           .select('valor')
           .eq('clave', 'tasa_usd_bs')
           .maybeSingle();
-      
+
       if (response == null) return 1.0;
       return (response['valor'] as num).toDouble();
     } catch (e) {
@@ -147,9 +157,10 @@ class ProductoService {
 
   Future<void> actualizarTasaCambio(double nuevaTasa) async {
     await supabase.from('configuracion').delete().eq('clave', 'tasa_usd_bs');
-    await supabase.from('configuracion').insert(
-      {'clave': 'tasa_usd_bs', 'valor': nuevaTasa},
-    );
+    await supabase.from('configuracion').insert({
+      'clave': 'tasa_usd_bs',
+      'valor': nuevaTasa,
+    });
   }
 
   Future<List<Map<String, dynamic>>> obtenerPedidos() async {
