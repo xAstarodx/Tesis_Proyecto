@@ -131,7 +131,7 @@ class ProductoService {
             'descripcion': descripcion,
             'stock': stock,
             'precio': precioUsd,
-            if (imagenUrl != null) 'imagen_url': imagenUrl,
+            'imagen_url': ?imagenUrl,
           })
           .eq('producto_id', productoId);
     } catch (e) {
