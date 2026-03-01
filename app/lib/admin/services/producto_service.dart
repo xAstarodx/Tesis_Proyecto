@@ -145,6 +145,8 @@ class ProductoService {
           .from('taza_dolar')
           .select('valor')
           .eq('clave', 'tasa_usd_bs')
+          .order('fecha_mod', ascending: false)
+          .limit(1)
           .maybeSingle();
 
       if (response == null) return 1.0;
@@ -156,10 +158,10 @@ class ProductoService {
   }
 
   Future<void> actualizarTasaCambio(double nuevaTasa) async {
-    await supabase.from('configuracion').delete().eq('clave', 'tasa_usd_bs');
-    await supabase.from('configuracion').insert({
+    await supabase.from('taza_dolar').insert({
       'clave': 'tasa_usd_bs',
       'valor': nuevaTasa,
+      'fecha_mod': DateTime.now().toIso8601String(),
     });
   }
 

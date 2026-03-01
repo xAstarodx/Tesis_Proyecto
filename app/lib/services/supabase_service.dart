@@ -7,7 +7,7 @@ class SupabaseService {
   Future<List<Producto>> obtenerProductos() async {
     try {
       final data = await _cliente.from('productos').select();
-      
+
       return (data as List<dynamic>)
           .map((e) => Producto.fromMap(e as Map<String, dynamic>))
           .toList();
@@ -27,7 +27,11 @@ class SupabaseService {
     }
   }
 
-  Future<void> crearProducto(String nombre, double precio, int categoriaId) async {
+  Future<void> crearProducto(
+    String nombre,
+    double precio,
+    int categoriaId,
+  ) async {
     await _cliente.from('productos').insert({
       'nombre': nombre,
       'precio': precio,
@@ -37,7 +41,10 @@ class SupabaseService {
 
   Future<List<Map<String, dynamic>>> obtenerPedidos() async {
     try {
-      final data = await _cliente.from('pedidos').select().order('created_at', ascending: false);
+      final data = await _cliente
+          .from('pedidos')
+          .select()
+          .order('created_at', ascending: false);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error al obtener pedidos: $e');
@@ -49,9 +56,14 @@ class SupabaseService {
     await _cliente.auth.signOut();
   }
 
-  Future<AuthResponse> registrarUsuario(String email, String password, {String? nombre, String? usuario}) async {
+  Future<AuthResponse> registrarUsuario(
+    String email,
+    String password, {
+    String? nombre,
+    String? usuario,
+  }) async {
     final metadatos = <String, dynamic>{};
-    
+
     if (nombre != null) {
       metadatos['nombre'] = nombre;
     }
@@ -68,18 +80,22 @@ class SupabaseService {
   }
 
   Future<AuthResponse> iniciarSesion(String email, String password) async {
-    return await _cliente.auth
-        .signInWithPassword(email: email, password: password);
+    return await _cliente.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
   }
 
   Future<double> obtenerTasaCambio() async {
     try {
       final response = await _cliente
-          .from('configuracion')
+          .from('taza_dolar')
           .select('valor')
           .eq('clave', 'tasa_usd_bs')
+          .order('fecha_mod', ascending: false)
+          .limit(1)
           .maybeSingle();
-      
+
       if (response == null) return 1.0;
       return (response['valor'] as num).toDouble();
     } catch (e) {
@@ -89,29 +105,44 @@ class SupabaseService {
 
   Future<void> enviarPedido({
     required List<Map<String, dynamic>> items,
+    required String horaRecogida,
   }) async {
     final user = _cliente.auth.currentUser;
     final email = user?.email;
     if (user == null || email == null) throw Exception('Debes iniciar sesión');
 
-    final usuarioData = await _cliente.from('usuario').select('usuario_id').eq('correo', email).maybeSingle();
-    if (usuarioData == null) throw Exception('Usuario no encontrado en la base de datos');
+    final usuarioData = await _cliente
+        .from('usuario')
+        .select('usuario_id')
+        .eq('correo', email)
+        .maybeSingle();
+    if (usuarioData == null)
+      throw Exception('Usuario no encontrado en la base de datos');
     final usuarioId = usuarioData['usuario_id'];
 
-    final pedidoRes = await _cliente.from('pedido').insert({
-      'usuario_id': usuarioId,
-      'estado_id': 1,
-    }).select('pedido_id').single();
-    
+    final pedidoRes = await _cliente
+        .from('pedido')
+        .insert({
+          'usuario_id': usuarioId,
+          'estado_id': 1,
+          'hora_recogida': horaRecogida,
+        })
+        .select('pedido_id')
+        .single();
+
     final pedidoId = pedidoRes['pedido_id'];
 
-    final detalles = items.map((item) => {
-      'pedido_id': pedidoId,
-      'producto_id': item['producto_id'],
-      'cantidad': item['cantidad'],
-      'precio_unitario': item['precio'],
-      'Descripcion': item['mensaje'] ?? '',
-    }).toList();
+    final detalles = items
+        .map(
+          (item) => {
+            'pedido_id': pedidoId,
+            'producto_id': item['producto_id'],
+            'cantidad': item['cantidad'],
+            'precio_unitario': item['precio'],
+            'Descripcion': item['mensaje'] ?? '',
+          },
+        )
+        .toList();
 
     await _cliente.from('detalle_pedido').insert(detalles);
   }
@@ -122,7 +153,11 @@ class SupabaseService {
     if (user == null || email == null) return [];
 
     try {
-      final usuarioData = await _cliente.from('usuario').select('usuario_id').eq('correo', email).maybeSingle();
+      final usuarioData = await _cliente
+          .from('usuario')
+          .select('usuario_id')
+          .eq('correo', email)
+          .maybeSingle();
       if (usuarioData == null) return [];
       final usuarioId = usuarioData['usuario_id'];
 
@@ -142,7 +177,7 @@ class SupabaseService {
           ''')
           .eq('usuario_id', usuarioId)
           .order('fecha_creacion', ascending: false);
-      
+
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       print('Error al obtener mis pedidos: $e');

@@ -13,15 +13,26 @@ class _CarritoPageState extends State<CarritoPage> {
   final _supabaseService = SupabaseService();
 
   void _enviarAlAdmin(List<Map<String, dynamic>> items) async {
-    final pedidoResumen = items.map((it) {
-      final qty = (it['cantidad'] ?? 1) as int;
-      final precio = (it['precio'] as num).toDouble();
-      final precioBs = (it['precio_bs'] as num?)?.toDouble() ?? 0.0;
-      final msg = (it['mensaje'] as String?)?.trim() ?? '';
-      return '${it['nombre']} x$qty - \$${precio.toStringAsFixed(2)} (Bs ${precioBs.toStringAsFixed(2)})${msg.isNotEmpty ? ' (msg: $msg)' : ''}';
-    }).join('\n');
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      helpText: 'SELECCIONE HORA DE RECOGIDA',
+    );
+    if (picked == null) return;
+    final horaRecogida = picked.format(context);
 
-    final contenido = 'Pedido:\n$pedidoResumen';
+    final pedidoResumen = items
+        .map((it) {
+          final qty = (it['cantidad'] ?? 1) as int;
+          final precio = (it['precio'] as num).toDouble();
+          final precioBs = (it['precio_bs'] as num?)?.toDouble() ?? 0.0;
+          final msg = (it['mensaje'] as String?)?.trim() ?? '';
+          return '${it['nombre']} x$qty - \$${precio.toStringAsFixed(2)} (Bs ${precioBs.toStringAsFixed(2)})${msg.isNotEmpty ? ' (msg: $msg)' : ''}';
+        })
+        .join('\n');
+
+    final contenido =
+        'Hora de recogida: $horaRecogida\n\nPedido:\n$pedidoResumen';
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -29,8 +40,14 @@ class _CarritoPageState extends State<CarritoPage> {
         title: const Text('Confirmar envío '),
         content: SingleChildScrollView(child: Text(contenido)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Enviar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Enviar'),
+          ),
         ],
       ),
     );
@@ -39,12 +56,23 @@ class _CarritoPageState extends State<CarritoPage> {
       try {
         await _supabaseService.enviarPedido(
           items: items,
+          horaRecogida: horaRecogida,
         );
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido enviado exitosamente'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pedido enviado exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
         CartModel.clear();
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar pedido: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al enviar pedido: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -80,15 +108,20 @@ class _CarritoPageState extends State<CarritoPage> {
                     final item = items[index];
                     final qty = (item['cantidad'] ?? 1) as int;
                     final precio = (item['precio'] as num).toDouble();
-                    final precioBs = (item['precio_bs'] as num?)?.toDouble() ?? 0.0;
+                    final precioBs =
+                        (item['precio_bs'] as num?)?.toDouble() ?? 0.0;
                     final mensaje = (item['mensaje'] ?? '') as String;
                     return Card(
                       child: ListTile(
                         leading: item['imagen_url'] != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(8.0),
-                                child: Image.network(item['imagen_url'],
-                                    width: 50, height: 50, fit: BoxFit.cover),
+                                child: Image.network(
+                                  item['imagen_url'],
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                ),
                               )
                             : Icon(item['icono']),
                         title: Text(item['nombre']),
@@ -101,8 +134,19 @@ class _CarritoPageState extends State<CarritoPage> {
                                 style: DefaultTextStyle.of(context).style,
                                 children: [
                                   const TextSpan(text: 'Unitario: '),
-                                  TextSpan(text: '\$${precio.toStringAsFixed(2)} ', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  TextSpan(text: '(Bs ${precioBs.toStringAsFixed(2)})', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                  TextSpan(
+                                    text: '\$${precio.toStringAsFixed(2)} ',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: '(Bs ${precioBs.toStringAsFixed(2)})',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -111,8 +155,21 @@ class _CarritoPageState extends State<CarritoPage> {
                                 style: DefaultTextStyle.of(context).style,
                                 children: [
                                   const TextSpan(text: 'Subtotal: '),
-                                  TextSpan(text: '\$${(precio * qty).toStringAsFixed(2)} ', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  TextSpan(text: '(Bs ${(precioBs * qty).toStringAsFixed(2)})', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                  TextSpan(
+                                    text:
+                                        '\$${(precio * qty).toStringAsFixed(2)} ',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        '(Bs ${(precioBs * qty).toStringAsFixed(2)})',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -133,7 +190,13 @@ class _CarritoPageState extends State<CarritoPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Total: \$${totalUsd.toStringAsFixed(2)} / Bs ${totalBs.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Total: \$${totalUsd.toStringAsFixed(2)} / Bs ${totalBs.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     ElevatedButton(
                       onPressed: () => _enviarAlAdmin(items),
