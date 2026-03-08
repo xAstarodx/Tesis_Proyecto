@@ -18,22 +18,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   int _indiceSeleccionado = 0;
   final _controladorTasa = TextEditingController();
 
-  static const List<String> _titulos = [
-    'Comida',
-    'Bebida',
-    'Pedidos',
-    'Montos',
-  ];
+  static const List<String> _titulos = ['Productos', 'Pedidos', 'Montos'];
   static const List<IconData> _iconos = [
-    Icons.fastfood,
-    Icons.local_drink,
+    Icons.store,
     Icons.list_alt,
     Icons.attach_money,
   ];
 
-  List<Map<String, dynamic>> _productosComida = [];
-  List<Map<String, dynamic>> _productosBebida = [];
+  List<Map<String, dynamic>> _todosLosProductos = [];
   List<Map<String, dynamic>> _listaPedidos = [];
+  List<Map<String, dynamic>> _categorias = [];
 
   double _tasaCambio = 1.0;
   bool _estaCargando = true;
@@ -42,7 +36,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   void initState() {
     super.initState();
     _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
-    _cargarProductos();
+    _cargarDatos();
   }
 
   @override
@@ -51,26 +45,26 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     super.dispose();
   }
 
-  Future<void> _cargarProductos() async {
+  Future<void> _cargarDatos() async {
     setState(() => _estaCargando = true);
     try {
       // Optimización: Carga paralela de todos los recursos
       final resultados = await Future.wait([
-        productoService.obtenerProductosPorCategoria(2),
-        productoService.obtenerProductosPorCategoria(1),
+        productoService.obtenerTodosLosProductos(),
         productoService.obtenerTasaCambio(),
         productoService.obtenerPedidos(),
+        productoService.obtenerCategorias(),
       ]);
 
-      final comida = resultados[0] as List<Map<String, dynamic>>;
-      final bebida = resultados[1] as List<Map<String, dynamic>>;
-      final tasa = resultados[2] as double;
-      final pedidos = resultados[3] as List<Map<String, dynamic>>;
+      final productos = resultados[0] as List<Map<String, dynamic>>;
+      final tasa = resultados[1] as double;
+      final pedidos = resultados[2] as List<Map<String, dynamic>>;
+      final categorias = resultados[3] as List<Map<String, dynamic>>;
 
       setState(() {
-        _productosComida = comida;
-        _productosBebida = bebida;
+        _todosLosProductos = productos;
         _listaPedidos = pedidos;
+        _categorias = categorias;
         _tasaCambio = tasa;
         _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
       });
@@ -119,7 +113,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               Navigator.of(ctx).pop();
               try {
                 await productoService.eliminarPedido(pedidoId);
-                _cargarProductos();
+                _cargarDatos();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -168,7 +162,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               Navigator.of(ctx).pop();
               try {
                 await productoService.eliminarProducto(productoId);
-                await _cargarProductos();
+                await _cargarDatos();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -316,7 +310,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                 2,
                               );
                               Navigator.of(ctx).pop();
-                              _cargarProductos();
+                              _cargarDatos();
                             } catch (e) {
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -344,7 +338,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                                 3,
                               );
                               Navigator.of(ctx).pop();
-                              _cargarProductos();
+                              _cargarDatos();
                             } catch (e) {
                               if (!mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -392,10 +386,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       appBar: AppBar(
         title: const Text('Panel Admin'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _cargarProductos,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _cargarDatos),
           IconButton(icon: const Icon(Icons.logout), onPressed: _cerrarSesion),
         ],
       ),
@@ -419,7 +410,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   }
 
   Widget _construirCuerpoSegunIndice(int indice) {
-    if (indice == 3) {
+    if (indice == 2) {
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -506,7 +497,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       );
     }
 
-    if (indice == 2) {
+    if (indice == 1) {
       return _estaCargando
           ? const Center(child: CircularProgressIndicator())
           : _listaPedidos.isEmpty
@@ -574,93 +565,89 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             );
     }
 
-    final esComida = indice == 0;
-    final productos = esComida ? _productosComida : _productosBebida;
+    // Indice 0: Productos
+    if (_estaCargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          ElevatedButton(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton.icon(
+            onPressed: _mostrarDialogoAgregarProducto,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Añadir Producto'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 50),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 4,
-            ),
-            onPressed: () => _mostrarDialogoAgregarProducto(esComida),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.add_circle_outline, size: 26),
-                SizedBox(width: 10),
-                Text(
-                  'Añadir producto',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _estaCargando
-                ? const Center(child: CircularProgressIndicator())
-                : productos.isEmpty
-                ? Center(
-                    child: Text(
-                      'No hay productos en ${_titulos[indice]}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: productos.length,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (context, i) {
-                      final producto = productos[i];
-                      final precioUsd =
-                          (producto['precio'] as num?)?.toDouble() ?? 0.0;
-                      final valorBs = precioUsd * _tasaCambio;
-                      return ListTile(
-                        title: Text(producto['nombre'] ?? 'Sin nombre'),
-                        subtitle: Text(
-                          'Cantidad: ${producto['stock'] ?? 0}    Valor: \$${precioUsd.toStringAsFixed(2)} (${valorBs.toStringAsFixed(2)} bs)',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _mostrarDialogoEditarProducto(
-                                producto,
-                                esComida,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _confirmarEliminarProducto(
-                                producto['producto_id'],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+        ),
+        Expanded(
+          child: _todosLosProductos.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No hay productos.',
+                    style: TextStyle(fontSize: 16),
                   ),
-          ),
-        ],
-      ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+                  itemCount: _todosLosProductos.length,
+                  separatorBuilder: (_, _) => const Divider(),
+                  itemBuilder: (context, i) {
+                    final producto = _todosLosProductos[i];
+                    final categoria = _categorias.firstWhere(
+                      (cat) => cat['categoria_id'] == producto['categoria_id'],
+                      orElse: () => {'nombre_categoria': 'Sin categoría'},
+                    );
+                    final categoriaEtiqueta =
+                        (categoria['nombre_categoria'] as String?) ??
+                        'Sin categoría';
+                    final precioUsd =
+                        (producto['precio'] as num?)?.toDouble() ?? 0.0;
+                    final valorBs = precioUsd * _tasaCambio;
+                    return ListTile(
+                      title: Text(producto['nombre'] ?? 'Sin nombre'),
+                      subtitle: Text(
+                        'Cantidad: ${producto['stock'] ?? 0} | \$${precioUsd.toStringAsFixed(2)} (Bs ${valorBs.toStringAsFixed(2)})',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () =>
+                                _mostrarDialogoEditarProducto(producto),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _confirmarEliminarProducto(
+                              producto['producto_id'],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
-  void _mostrarDialogoAgregarProducto(bool esComida) {
+  void _mostrarDialogoAgregarProducto() {
     final controladorNombre = TextEditingController();
     final controladorDescripcion = TextEditingController();
     final controladorPrecio = TextEditingController();
     final controladorCantidad = TextEditingController();
     File? imagenSeleccionada;
+    int? categoriaSeleccionadaId;
 
     showDialog<void>(
       context: context,
@@ -671,6 +658,39 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                _categorias.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Text(
+                          'No se encontraron categorías. Por favor, añada categorías en la base de datos para poder crear productos.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.redAccent),
+                        ),
+                      )
+                    : DropdownButtonFormField<int>(
+                        value: categoriaSeleccionadaId,
+                        hint: const Text('Seleccionar Categoría'),
+                        items: _categorias.map((cat) {
+                          return DropdownMenuItem<int>(
+                            value: cat['categoria_id'] as int,
+                            child: Text(
+                              (cat['nombre_categoria'] as String?) ??
+                                  'Sin Etiqueta',
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            categoriaSeleccionadaId = value;
+                          });
+                        },
+                        validator: (value) =>
+                            value == null ? 'Seleccione una categoría' : null,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                const SizedBox(height: 16),
                 GestureDetector(
                   onTap: () async {
                     final picker = ImagePicker();
@@ -754,7 +774,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   controladorPrecio.text.replaceAll(',', '.'),
                 );
 
-                if (nombre.isEmpty || cantidad == null || precio == null) {
+                if (nombre.isEmpty ||
+                    cantidad == null ||
+                    precio == null ||
+                    categoriaSeleccionadaId == null) {
                   return;
                 }
 
@@ -764,11 +787,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     descripcion: descripcion,
                     precioUsd: precio,
                     stock: cantidad,
-                    categoriaId: esComida ? 2 : 1,
+                    categoriaId: categoriaSeleccionadaId!,
                     imagenFile: imagenSeleccionada,
                   );
 
-                  await _cargarProductos();
+                  await _cargarDatos();
 
                   if (!mounted) return;
                   Navigator.of(context).pop();
@@ -799,10 +822,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  void _mostrarDialogoEditarProducto(
-    Map<String, dynamic> producto,
-    bool esComida,
-  ) {
+  void _mostrarDialogoEditarProducto(Map<String, dynamic> producto) {
     final controladorNombre = TextEditingController(
       text: producto['nombre'] ?? '',
     );
@@ -937,7 +957,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     precioUsd: precio,
                     imagenFile: imagenSeleccionada,
                   );
-                  await _cargarProductos();
+                  await _cargarDatos();
                   if (!mounted) return;
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
