@@ -38,12 +38,14 @@ class _MyHomePageState extends State<MyHomePage> {
               SizedBox(height: 8),
               Text('C.I: V-12.345.678'),
               SizedBox(height: 8),
-              
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
         ],
       ),
     );
@@ -61,11 +63,19 @@ class _MyHomePageState extends State<MyHomePage> {
         _loading = true;
         _error = null;
       });
-      final productos = await _svc.obtenerProductos();
-      final tasa = await _svc.obtenerTasaCambio();
+
+      // Optimización: Ejecutar peticiones en paralelo
+      final resultados = await Future.wait([
+        _svc.obtenerProductos(),
+        _svc.obtenerTasaCambio(),
+      ]);
+
+      final productos =
+          resultados[0] as List<dynamic>; // Ajustar tipo según tu modelo
+      final tasa = resultados[1] as double;
+
       setState(() {
         _menuItems = productos.map((p) {
-          
           return {
             'nombre': p.nombre,
             'precio': p.precio,
@@ -100,10 +110,11 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     final filtered = _menuItems
-        .where((it) => it['nombre']
-            .toString()
-            .toLowerCase()
-            .contains(_search.toLowerCase()))
+        .where(
+          (it) => it['nombre'].toString().toLowerCase().contains(
+            _search.toLowerCase(),
+          ),
+        )
         .toList();
 
     return Scaffold(
@@ -146,37 +157,48 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-            : (_error != null
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Error cargando productos:\n$_error', textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        ElevatedButton(onPressed: _loadProductos, child: const Text('Reintentar')),
-                      ],
-                    ),
-                  )
-                : (_menuItems.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('No hay productos disponibles'),
-                            const SizedBox(height: 12),
-                            ElevatedButton(onPressed: _loadProductos, child: const Text('Recargar')),
-                          ],
-                        ),
-                      )
-                    : ListView(
-                        children: [
-                          for (var item in filtered)
-                            ElementoMenu(
-                              item: item,
-                              onTap: () => _showDetails(item),
+                  : (_error != null
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Error cargando productos:\n$_error',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _loadProductos,
+                                  child: const Text('Reintentar'),
+                                ),
+                              ],
                             ),
-                        ],
-                      ))),
+                          )
+                        : (_menuItems.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'No hay productos disponibles',
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ElevatedButton(
+                                        onPressed: _loadProductos,
+                                        child: const Text('Recargar'),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView(
+                                  children: [
+                                    for (var item in filtered)
+                                      ElementoMenu(
+                                        item: item,
+                                        onTap: () => _showDetails(item),
+                                      ),
+                                  ],
+                                ))),
             ),
           ],
         ),

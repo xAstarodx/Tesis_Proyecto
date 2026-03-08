@@ -12,8 +12,14 @@ class ElementoMenu extends StatelessWidget {
         leading: item['imagen_url'] != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(item['imagen_url'],
-                    width: 50, height: 50, fit: BoxFit.cover),
+                child: Image.network(
+                  item['imagen_url'],
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  cacheWidth: 100, // Optimización de memoria
+                  cacheHeight: 100,
+                ),
               )
             : Icon(item['icono']),
         title: Text(item['nombre']),
@@ -21,8 +27,17 @@ class ElementoMenu extends StatelessWidget {
           text: TextSpan(
             style: DefaultTextStyle.of(context).style,
             children: [
-              TextSpan(text: '\$${(item['precio'] as num).toStringAsFixed(2)} ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              TextSpan(text: '(Bs ${(item['precio_bs'] as num).toStringAsFixed(2)})', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              TextSpan(
+                text: '\$${(item['precio'] as num).toStringAsFixed(2)} ',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              TextSpan(
+                text: '(Bs ${(item['precio_bs'] as num).toStringAsFixed(2)})',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
             ],
           ),
         ),

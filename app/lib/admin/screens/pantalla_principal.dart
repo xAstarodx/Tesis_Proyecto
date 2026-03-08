@@ -54,10 +54,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _cargarProductos() async {
     setState(() => _estaCargando = true);
     try {
-      final comida = await productoService.obtenerProductosPorCategoria(2);
-      final bebida = await productoService.obtenerProductosPorCategoria(1);
-      final tasa = await productoService.obtenerTasaCambio();
-      final pedidos = await productoService.obtenerPedidos();
+      // Optimización: Carga paralela de todos los recursos
+      final resultados = await Future.wait([
+        productoService.obtenerProductosPorCategoria(2),
+        productoService.obtenerProductosPorCategoria(1),
+        productoService.obtenerTasaCambio(),
+        productoService.obtenerPedidos(),
+      ]);
+
+      final comida = resultados[0] as List<Map<String, dynamic>>;
+      final bebida = resultados[1] as List<Map<String, dynamic>>;
+      final tasa = resultados[2] as double;
+      final pedidos = resultados[3] as List<Map<String, dynamic>>;
 
       setState(() {
         _productosComida = comida;

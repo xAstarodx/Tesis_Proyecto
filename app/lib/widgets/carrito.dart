@@ -121,6 +121,8 @@ class _CarritoPageState extends State<CarritoPage> {
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 100, // Optimización
+                                  cacheHeight: 100,
                                 ),
                               )
                             : Icon(item['icono']),
