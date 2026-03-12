@@ -64,14 +64,12 @@ class _MyHomePageState extends State<MyHomePage> {
         _error = null;
       });
 
-      // Optimización: Ejecutar peticiones en paralelo
       final resultados = await Future.wait([
         _svc.obtenerProductos(),
         _svc.obtenerTasaCambio(),
       ]);
 
-      final productos =
-          resultados[0] as List<dynamic>; // Ajustar tipo según tu modelo
+      final productos = resultados[0] as List<dynamic>;
       final tasa = resultados[1] as double;
 
       setState(() {
@@ -121,23 +119,40 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Cafetín ISABORES - IUTEPAL'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MisPedidosPage()),
-              );
-            },
-            tooltip: 'Mis Pedidos',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _cerrarSesion,
-            tooltip: 'Cerrar sesión',
-          ),
-        ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.inversePrimary,
+              ),
+              child: const Text('Menu Cliente', style: TextStyle(fontSize: 24)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Mis Pedidos'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MisPedidosPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Cerrar sesión'),
+              onTap: () {
+                Navigator.pop(context);
+                _cerrarSesion();
+              },
+            ),
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

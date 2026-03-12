@@ -123,16 +123,21 @@ class ProductoService {
       }
     }
 
+    final datosActualizar = {
+      'nombre': nombre,
+      'descripcion': descripcion,
+      'stock': stock,
+      'precio': precioUsd,
+    };
+
+    if (imagenUrl != null) {
+      datosActualizar['imagen_url'] = imagenUrl;
+    }
+
     try {
       await supabase
           .from('productos')
-          .update({
-            'nombre': nombre,
-            'descripcion': descripcion,
-            'stock': stock,
-            'precio': precioUsd,
-            'imagen_url': ?imagenUrl,
-          })
+          .update(datosActualizar)
           .eq('producto_id', productoId);
     } catch (e) {
       throw Exception('Error al actualizar producto: $e');

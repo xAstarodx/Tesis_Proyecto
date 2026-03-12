@@ -391,21 +391,31 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ],
       ),
       backgroundColor: Colors.white,
-      body: _construirCuerpoSegunIndice(_indiceSeleccionado),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _indiceSeleccionado,
-        onTap: _alTocarItem,
-        backgroundColor: Colors.blue,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        type: BottomNavigationBarType.fixed,
-        items: List.generate(_titulos.length, (index) {
-          return BottomNavigationBarItem(
-            icon: Icon(_iconos[index]),
-            label: _titulos[index],
-          );
-        }),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text(
+                'Menu Admin',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
+            ),
+            for (int i = 0; i < _titulos.length; i++)
+              ListTile(
+                leading: Icon(_iconos[i]),
+                title: Text(_titulos[i]),
+                selected: _indiceSeleccionado == i,
+                onTap: () {
+                  _alTocarItem(i);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
       ),
+      body: _construirCuerpoSegunIndice(_indiceSeleccionado),
     );
   }
 
