@@ -48,9 +48,8 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
         final oldRecord = payload.oldRecord;
 
         // Optimización: Validación de nulos para evitar crashes
-        if (newRecord != null &&
-            newRecord['estado_id'] == 2 &&
-            oldRecord?['estado_id'] != 2) {
+        if (newRecord['estado_id'] == 2 &&
+            oldRecord['estado_id'] != 2) {
           _reproducirSonidoNotificacion();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

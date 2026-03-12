@@ -668,7 +668,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         ),
                       )
                     : DropdownButtonFormField<int>(
-                        value: categoriaSeleccionadaId,
+                        initialValue: categoriaSeleccionadaId,
                         hint: const Text('Seleccionar Categoría'),
                         items: _categorias.map((cat) {
                           return DropdownMenuItem<int>(
