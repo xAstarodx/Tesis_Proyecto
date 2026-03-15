@@ -29,13 +29,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   List<Map<String, dynamic>> _listaPedidos = [];
   List<Map<String, dynamic>> _categorias = [];
 
-  double _tasaCambio = 1.0;
+  double _tasaCambioValor = 1.0;
+  int? _tasaCambioId; // To store the ID of the exchange rate
   bool _estaCargando = true;
 
   @override
   void initState() {
     super.initState();
-    _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
+    _controladorTasa.text = _tasaCambioValor.toStringAsFixed(2);
     _cargarDatos();
   }
 
@@ -51,13 +52,15 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       // Optimización: Carga paralela de todos los recursos
       final resultados = await Future.wait([
         productoService.obtenerTodosLosProductos(),
-        productoService.obtenerTasaCambio(),
+        productoService.obtenerTasaCambioInfo(), // Use the new method
         productoService.obtenerPedidos(),
         productoService.obtenerCategorias(),
       ]);
 
       final productos = resultados[0] as List<Map<String, dynamic>>;
-      final tasa = resultados[1] as double;
+      final tasaInfo = resultados[1] as Map<String, dynamic>?;
+      final tasa = tasaInfo?['valor'] as double? ?? 1.0;
+      final tasaId = tasaInfo?['id'] as int?;
       final pedidos = resultados[2] as List<Map<String, dynamic>>;
       final categorias = resultados[3] as List<Map<String, dynamic>>;
 
@@ -65,8 +68,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         _todosLosProductos = productos;
         _listaPedidos = pedidos;
         _categorias = categorias;
-        _tasaCambio = tasa;
-        _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
+        _tasaCambioValor = tasa;
+        _tasaCambioId = tasaId;
+        _controladorTasa.text = _tasaCambioValor.toStringAsFixed(2);
       });
     } catch (e) {
       print('Error cargando productos: $e');
@@ -199,6 +203,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ).toLocal().toString().split('.')[0]
         : '';
     final horaRecogida = pedido['hora_recogida'] ?? 'No especificada';
+    final formaPago =
+        pedido['forma_pago']?['nombre_metodo'] ?? 'No especificada';
+
+    final datosPago = pedido['datos_pago_orden'];
+    final referencia = datosPago?['referencia'];
+    final comprobanteUrl = datosPago?['comprobante_url'];
 
     double totalUsd = 0.0;
 
@@ -230,7 +240,37 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              Text('Forma de Pago: $formaPago'),
               const Divider(),
+              if (referencia != null || comprobanteUrl != null) ...[
+                const Text(
+                  'Datos de Pago del Usuario:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey,
+                  ),
+                ),
+                if (referencia != null) Text('Referencia: $referencia'),
+                if (comprobanteUrl != null) ...[
+                  const SizedBox(height: 8),
+                  const Text('Comprobante:'),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) =>
+                            Dialog(child: Image.network(comprobanteUrl)),
+                      );
+                    },
+                    child: SizedBox(
+                      height: 150,
+                      child: Image.network(comprobanteUrl, fit: BoxFit.cover),
+                    ),
+                  ),
+                ],
+                const Divider(),
+              ],
               const Text(
                 'Productos:',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -278,7 +318,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 ),
               ),
               Text(
-                'Total Bs: Bs ${(totalUsd * _tasaCambio).toStringAsFixed(2)}',
+                'Total Bs: Bs ${(totalUsd * _tasaCambioValor).toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -336,6 +376,35 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                               await productoService.actualizarEstadoPedido(
                                 pedido['pedido_id'],
                                 3,
+                              );
+                              Navigator.of(ctx).pop();
+                              _cargarDatos();
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.payment),
+                    label: const Text('Pagado'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: pedido['estado_id'] == 4
+                        ? null // Disable if already paid
+                        : () async {
+                            try {
+                              await productoService.actualizarEstadoPedido(
+                                pedido['pedido_id'],
+                                4, // Estado 'Pagado'
                               );
                               Navigator.of(ctx).pop();
                               _cargarDatos();
@@ -427,22 +496,23 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
-            Column(
-              children: [
-                Text(
-                  '${_tasaCambio.toStringAsFixed(2)} bs = 1\$',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+            if (_tasaCambioValor != null)
+              Column(
+                children: [
+                  Text(
+                    '${_tasaCambioValor.toStringAsFixed(2)} bs = 1\$',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '1\$',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '1\$',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -470,8 +540,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     if (valor != null && valor > 0) {
                       try {
                         await productoService.actualizarTasaCambio(valor);
+                        await _cargarDatos(); // Reload all data including new tasa ID
+                        if (!context.mounted) return;
                         setState(() {
-                          _tasaCambio = valor;
+                          // Update local state if _cargarDatos didn't trigger a full rebuild
+                          _tasaCambioValor = valor;
                         });
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -495,7 +568,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           backgroundColor: Colors.red,
                         ),
                       );
-                      _controladorTasa.text = _tasaCambio.toStringAsFixed(2);
+                      _controladorTasa.text = _tasaCambioValor.toStringAsFixed(
+                        2,
+                      );
                     }
                   },
                   child: const Text('Actualizar'),
@@ -538,7 +613,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     })
                     .join(', ');
 
-                final totalBs = totalUsd * _tasaCambio;
+                final totalBs = totalUsd * _tasaCambioValor;
                 final fecha = pedido['fecha_creacion'] != null
                     ? DateTime.parse(
                         pedido['fecha_creacion'],
@@ -547,11 +622,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 final cliente = pedido['usuario']?['nombre'] ?? 'Desconocido';
                 final horaRecogida = pedido['hora_recogida'] ?? 'Sin hora';
                 final estado = pedido['estado']?['etiqueta'] ?? 'Pendiente';
+                final formaPago =
+                    pedido['forma_pago']?['nombre_metodo'] ?? 'N/A';
 
                 return ListTile(
                   title: Text('Cliente: $cliente'),
                   subtitle: Text(
-                    'Estado: $estado\n$detalleTexto\n\nFecha: $fecha\nHora Recogida: $horaRecogida',
+                    'Estado: $estado\nPago: $formaPago\n$detalleTexto\n\nFecha: $fecha\nHora Recogida: $horaRecogida',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -621,7 +698,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         'Sin categoría';
                     final precioUsd =
                         (producto['precio'] as num?)?.toDouble() ?? 0.0;
-                    final valorBs = precioUsd * _tasaCambio;
+                    final valorBs = precioUsd * _tasaCambioValor;
                     return ListTile(
                       title: Text(producto['nombre'] ?? 'Sin nombre'),
                       subtitle: Text(

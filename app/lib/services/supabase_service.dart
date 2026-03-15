@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/producto_model.dart';
 
@@ -24,6 +25,22 @@ class SupabaseService {
     } catch (e) {
       print('Error al obtener categorías: $e');
       return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerFormasPago() async {
+    try {
+      final data = await _cliente
+          .from('forma_pago')
+          .select()
+          .order('forma_pago_id', ascending: true);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      return [
+        {'forma_pago_id': 1, 'nombre_metodo': 'Efectivo'},
+        {'forma_pago_id': 2, 'nombre_metodo': 'Tarjeta'},
+        {'forma_pago_id': 3, 'nombre_metodo': 'Pago Móvil'},
+      ];
     }
   }
 
@@ -106,6 +123,9 @@ class SupabaseService {
   Future<void> enviarPedido({
     required List<Map<String, dynamic>> items,
     required String horaRecogida,
+    required int formaPagoId,
+    String? referencia,
+    File? comprobanteImage,
   }) async {
     final user = _cliente.auth.currentUser;
     final email = user?.email;
@@ -121,17 +141,49 @@ class SupabaseService {
     }
     final usuarioId = usuarioData['usuario_id'];
 
+    String? comprobanteUrl;
+
+    if (comprobanteImage != null) {
+      try {
+        final bytes = await comprobanteImage.readAsBytes();
+        final fileExt = comprobanteImage.path.split('.').last;
+        final fileName =
+            'comprobante_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+        await _cliente.storage
+            .from('comprobantes_pago')
+            .uploadBinary(
+              fileName,
+              bytes,
+              fileOptions: FileOptions(contentType: 'image/$fileExt'),
+            );
+        comprobanteUrl = _cliente.storage
+            .from('comprobantes_pago')
+            .getPublicUrl(fileName);
+      } catch (e) {
+        print('Error al subir comprobante: $e');
+      }
+    }
+
     final pedidoRes = await _cliente
         .from('pedido')
         .insert({
           'usuario_id': usuarioId,
           'estado_id': 1,
           'hora_recogida': horaRecogida,
+          'forma_pago_id': formaPagoId,
         })
         .select('pedido_id')
         .single();
 
     final pedidoId = pedidoRes['pedido_id'];
+
+    if (referencia != null || comprobanteUrl != null) {
+      await _cliente.from('datos_pago_orden').insert({
+        'pedido_id': pedidoId,
+        'referencia': referencia,
+        'comprobante_url': comprobanteUrl,
+      });
+    }
 
     final detalles = items
         .map(
@@ -174,6 +226,11 @@ class SupabaseService {
           event: PostgresChangeEvent.update,
           schema: 'public',
           table: 'pedido',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'usuario_id',
+            value: userId,
+          ),
           callback: onUpdate,
         )
         .subscribe();
@@ -206,6 +263,8 @@ class SupabaseService {
             estado (
               etiqueta
             ),
+            datos_pago_orden ( referencia, comprobante_url ),
+            forma_pago ( nombre_metodo ),
             detalle_pedido (
               *,
               productos (

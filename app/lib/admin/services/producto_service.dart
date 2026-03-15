@@ -144,22 +144,53 @@ class ProductoService {
     }
   }
 
-  Future<double> obtenerTasaCambio() async {
+  Future<Map<String, dynamic>?> obtenerTasaCambioInfo() async {
     try {
       final response = await supabase
           .from('taza_dolar')
-          .select('valor')
+          .select('valor, id')
           .eq('clave', 'tasa_usd_bs')
           .order('fecha_mod', ascending: false)
           .limit(1)
           .maybeSingle();
 
-      if (response == null) return 1.0;
-      return (response['valor'] as num).toDouble();
+      if (response == null) return null;
+      return {
+        'valor': (response['valor'] as num).toDouble(),
+        'id': response['id'] as int,
+      };
     } catch (e) {
       print('Error obteniendo tasa: $e');
-      return 1.0;
+      return null;
     }
+  }
+
+  Future<void> _insertarRegistroPago({
+    required int pedidoId,
+    required double montoTotalUsd,
+    required int formaPagoId,
+    int? tasaDolarId,
+    String? referencia,
+    String? comprobanteUrl,
+  }) async {
+    // 1. Insert into registro_pagos
+    final registroPagoRes = await supabase
+        .from('registro_pagos')
+        .insert({'id_pedido': pedidoId, 'monto_total_pedido': montoTotalUsd})
+        .select('id_pago')
+        .single();
+
+    final idPago = registroPagoRes['id_pago'];
+
+    // 2. Insert into detalle_pago
+    await supabase.from('detalle_pago').insert({
+      'id_pago': idPago,
+      'forma_pago_id': formaPagoId,
+      'id_taza': tasaDolarId,
+      'monto_pagado': montoTotalUsd,
+      'referencia': referencia,
+      'comprobante_url': comprobanteUrl,
+    });
   }
 
   Future<void> actualizarTasaCambio(double nuevaTasa) async {
@@ -183,6 +214,8 @@ class ProductoService {
               nombre,
               correo
             ),
+            datos_pago_orden ( referencia, comprobante_url ),
+            forma_pago ( nombre_metodo ),
             detalle_pedido(*, productos(*))
           ''')
           .order('fecha_creacion', ascending: false);
@@ -198,6 +231,48 @@ class ProductoService {
           .from('pedido')
           .update({'estado_id': nuevoEstadoId})
           .eq('pedido_id', pedidoId);
+
+      if (nuevoEstadoId == 4) {
+        // If status is changed to 'Pagado', record payment details
+        final pedidoData = await supabase
+            .from('pedido')
+            .select('''
+              *,
+              forma_pago ( forma_pago_id ),
+              detalle_pedido (
+                cantidad,
+                precio_unitario
+              ),
+              datos_pago_orden ( referencia, comprobante_url )
+            ''')
+            .eq('pedido_id', pedidoId)
+            .single();
+
+        double totalUsd = 0.0;
+        final detalles = pedidoData['detalle_pedido'] as List<dynamic>? ?? [];
+        for (var d in detalles) {
+          totalUsd += (d['cantidad'] as num) * (d['precio_unitario'] as num);
+        }
+
+        final formaPagoId = pedidoData['forma_pago']['forma_pago_id'] as int;
+
+        // Obtener datos reportados por el usuario
+        final datosUsuario = pedidoData['datos_pago_orden'];
+        // Nota: Supabase devuelve null, un Map o una Lista dependiendo de la FK. Asumimos Map o manejamos null.
+
+        // Get current exchange rate with ID
+        final tasaCambioInfo = await obtenerTasaCambioInfo();
+        final tasaDolarId = tasaCambioInfo?['id'] as int?;
+
+        await _insertarRegistroPago(
+          pedidoId: pedidoId,
+          montoTotalUsd: totalUsd,
+          formaPagoId: formaPagoId,
+          tasaDolarId: tasaDolarId,
+          referencia: datosUsuario?['referencia'],
+          comprobanteUrl: datosUsuario?['comprobante_url'],
+        );
+      }
     } catch (e) {
       throw Exception('Error al actualizar el estado del pedido: $e');
     }

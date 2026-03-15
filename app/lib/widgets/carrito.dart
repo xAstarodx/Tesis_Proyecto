@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/cart_model.dart';
 import '../services/supabase_service.dart';
 
@@ -11,6 +13,25 @@ class CarritoPage extends StatefulWidget {
 
 class _CarritoPageState extends State<CarritoPage> {
   final _supabaseService = SupabaseService();
+  List<Map<String, dynamic>> _formasPago = [];
+  final _referenciaController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarFormasPago();
+  }
+
+  @override
+  void dispose() {
+    _referenciaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarFormasPago() async {
+    final formas = await _supabaseService.obtenerFormasPago();
+    if (mounted) setState(() => _formasPago = formas);
+  }
 
   void _enviarAlAdmin(List<Map<String, dynamic>> items) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -34,21 +55,157 @@ class _CarritoPageState extends State<CarritoPage> {
     final contenido =
         'Hora de recogida: $horaRecogida\n\nPedido:\n$pedidoResumen';
 
+    int formaPagoId = _formasPago.isNotEmpty
+        ? _formasPago.first['forma_pago_id']
+        : 1;
+
+    _referenciaController.clear();
+    File? comprobanteImage;
+    String? errorMessage;
+    final picker = ImagePicker();
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Confirmar envío '),
-        content: SingleChildScrollView(child: Text(contenido)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Enviar'),
-          ),
-        ],
+      barrierDismissible: false, // Evita que se cierre al tocar fuera
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          // Verificar si es Pago Movil
+          final selectedMetodo = _formasPago.firstWhere(
+            (element) => element['forma_pago_id'] == formaPagoId,
+            orElse: () => {'nombre_metodo': ''},
+          );
+          final esPagoMovil =
+              selectedMetodo['nombre_metodo'].toString().toLowerCase().contains(
+                'móvil',
+              ) ||
+              selectedMetodo['nombre_metodo'].toString().toLowerCase().contains(
+                'movil',
+              );
+
+          return AlertDialog(
+            title: const Text('Confirmar envío '),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(contenido),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Forma de Pago:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (_formasPago.isEmpty)
+                    const Text('Cargando formas de pago...')
+                  else
+                    DropdownButton<int>(
+                      isExpanded: true,
+                      value: formaPagoId,
+                      items: _formasPago.map((fp) {
+                        return DropdownMenuItem<int>(
+                          value: fp['forma_pago_id'],
+                          child: Text(fp['nombre_metodo']),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null)
+                          setStateDialog(() => formaPagoId = val);
+                      },
+                    ),
+                  if (esPagoMovil) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Datos del Pago Móvil:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _referenciaController,
+                      decoration: const InputDecoration(
+                        labelText: 'Número de Referencia (Texto)',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final XFile? image = await picker.pickImage(
+                                source: ImageSource.gallery,
+                              );
+                              if (image != null) {
+                                setStateDialog(() {
+                                  comprobanteImage = File(image.path);
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Adjuntar Foto'),
+                          ),
+                        ),
+                        if (comprobanteImage != null)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8.0),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (comprobanteImage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Imagen seleccionada',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                  ],
+                  if (errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (esPagoMovil) {
+                    if (_referenciaController.text.trim().isEmpty &&
+                        comprobanteImage == null) {
+                      setStateDialog(() {
+                        errorMessage =
+                            'Debe ingresar referencia o foto del comprobante';
+                      });
+                      return;
+                    }
+                  }
+                  Navigator.pop(context, true);
+                },
+                child: const Text('Enviar'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -57,6 +214,11 @@ class _CarritoPageState extends State<CarritoPage> {
         await _supabaseService.enviarPedido(
           items: items,
           horaRecogida: horaRecogida,
+          formaPagoId: formaPagoId,
+          referencia: _referenciaController.text.trim().isEmpty
+              ? null
+              : _referenciaController.text.trim(),
+          comprobanteImage: comprobanteImage,
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

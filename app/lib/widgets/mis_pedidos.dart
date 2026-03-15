@@ -20,8 +20,13 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
   @override
   void initState() {
     super.initState();
-    _cargarPedidos();
-    _suscribirACambios();
+    _inicializarDatos();
+  }
+
+  Future<void> _inicializarDatos() async {
+    // Cargamos primero para tener el estado base local
+    await _cargarPedidos();
+    if (mounted) _suscribirACambios();
   }
 
   @override
@@ -45,24 +50,34 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
       userId: userId,
       onUpdate: (payload) {
         final newRecord = payload.newRecord;
-        final oldRecord = payload.oldRecord;
 
-        // Optimización: Validación de nulos para evitar crashes
-        if (newRecord != null &&
-            oldRecord != null &&
-            newRecord['estado_id'] == 2 &&
-            oldRecord['estado_id'] != 2) {
-          _reproducirSonidoNotificacion();
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '¡Tu pedido #${newRecord['pedido_id']} está listo para recoger!',
+        if (newRecord != null) {
+          final pedidoId = newRecord['pedido_id'];
+          final nuevoEstado = newRecord['estado_id'];
+
+          // Buscamos el estado que tenía este pedido en nuestra lista local
+          final pedidoLocal = _pedidos.firstWhere(
+            (p) => p['pedido_id'] == pedidoId,
+            orElse: () => {},
+          );
+          final estadoAnterior = pedidoLocal.isNotEmpty
+              ? pedidoLocal['estado_id']
+              : null;
+
+          // Solo notificamos si el estado cambió a 2 (Listo) y antes NO era 2
+          if (nuevoEstado == 2 && estadoAnterior != 2) {
+            _reproducirSonidoNotificacion();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '¡Tu pedido #$pedidoId está listo para recoger!',
+                  ),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 5),
                 ),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 5),
-              ),
-            );
+              );
+            }
           }
         }
         // Recargar la lista para mostrar el estado actualizado
@@ -106,6 +121,8 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                     : '';
                 final horaRecogida =
                     pedido['hora_recogida'] ?? 'No especificada';
+                final formaPago =
+                    pedido['forma_pago']?['nombre_metodo'] ?? 'N/A';
                 final detalles =
                     (pedido['detalle_pedido'] as List<dynamic>? ?? []);
 
@@ -120,7 +137,7 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                   child: ExpansionTile(
                     title: Text('Pedido #${pedido['pedido_id']}'),
                     subtitle: Text(
-                      'Estado: $estado\nFecha: $fecha\nHora Recogida: $horaRecogida\nTotal: \$${total.toStringAsFixed(2)}',
+                      'Estado: $estado\nPago: $formaPago\nFecha: $fecha\nHora Recogida: $horaRecogida\nTotal: \$${total.toStringAsFixed(2)}',
                     ),
                     children: detalles.map<Widget>((d) {
                       final prodNombre =
