@@ -18,10 +18,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   int _indiceSeleccionado = 0;
   final _controladorTasa = TextEditingController();
 
-  static const List<String> _titulos = ['Productos', 'Pedidos', 'Montos'];
+  static const List<String> _titulos = [
+    'Productos',
+    'Pedidos',
+    'Pagados',
+    'Montos',
+  ];
   static const List<IconData> _iconos = [
     Icons.store,
     Icons.list_alt,
+    Icons.history,
     Icons.attach_money,
   ];
 
@@ -30,7 +36,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   List<Map<String, dynamic>> _categorias = [];
 
   double _tasaCambioValor = 1.0;
-  int? _tasaCambioId; // To store the ID of the exchange rate
+  int? _tasaCambioId;
   bool _estaCargando = true;
 
   @override
@@ -206,7 +212,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     final formaPago =
         pedido['forma_pago']?['nombre_metodo'] ?? 'No especificada';
 
-    final datosPago = pedido['datos_pago_orden'];
+    final datosPagoRaw = pedido['datos_pago_orden'];
+    final Map<String, dynamic>? datosPago =
+        (datosPagoRaw is List && datosPagoRaw.isNotEmpty)
+        ? datosPagoRaw.first
+        : (datosPagoRaw is Map ? datosPagoRaw : null);
+
     final referencia = datosPago?['referencia'];
     final comprobanteUrl = datosPago?['comprobante_url'];
 
@@ -490,7 +501,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   }
 
   Widget _construirCuerpoSegunIndice(int indice) {
-    if (indice == 2) {
+    if (indice == 3) {
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -582,17 +593,84 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       );
     }
 
-    if (indice == 1) {
+    if (indice == 2) {
+      final pedidosPagados = _listaPedidos
+          .where((p) => p['estado_id'] == 4)
+          .toList();
+
       return _estaCargando
           ? const Center(child: CircularProgressIndicator())
-          : _listaPedidos.isEmpty
+          : pedidosPagados.isEmpty
+          ? const Center(child: Text('No hay pedidos pagados'))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: pedidosPagados.length,
+              separatorBuilder: (_, _) => const Divider(),
+              itemBuilder: (context, i) {
+                final pedido = pedidosPagados[i];
+                final detalles =
+                    (pedido['detalle_pedido'] as List<dynamic>? ?? []);
+
+                double totalUsd = 0.0;
+                final detalleTexto = detalles
+                    .map((d) {
+                      final prod = d['productos'];
+                      final subtotal =
+                          (d['cantidad'] as num) *
+                          (d['precio_unitario'] as num);
+                      totalUsd += subtotal;
+                      final desc =
+                          d['Descripcion'] != null &&
+                              d['Descripcion'].toString().isNotEmpty
+                          ? ' (${d['Descripcion']})'
+                          : '';
+                      return '${prod?['nombre'] ?? 'Producto'} x${d['cantidad']}$desc';
+                    })
+                    .join(', ');
+
+                final totalBs = totalUsd * _tasaCambioValor;
+                final fecha = pedido['fecha_creacion'] != null
+                    ? DateTime.parse(
+                        pedido['fecha_creacion'],
+                      ).toLocal().toString().split('.')[0]
+                    : '';
+                final cliente = pedido['usuario']?['nombre'] ?? 'Desconocido';
+                final horaRecogida = pedido['hora_recogida'] ?? 'Sin hora';
+                final estado = pedido['estado']?['etiqueta'] ?? 'Pagado';
+                final formaPago =
+                    pedido['forma_pago']?['nombre_metodo'] ?? 'N/A';
+
+                return ListTile(
+                  title: Text('Cliente: $cliente'),
+                  subtitle: Text(
+                    'Estado: $estado\nPago: $formaPago\n$detalleTexto\n\nFecha: $fecha\nHora Recogida: $horaRecogida',
+                  ),
+                  trailing: Text(
+                    '\$${totalUsd.toStringAsFixed(2)}\nBs ${totalBs.toStringAsFixed(2)}',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () => _mostrarDetallePedido(pedido),
+                );
+              },
+            );
+    }
+
+    if (indice == 1) {
+      final pedidosPendientes = _listaPedidos
+          .where((p) => p['estado_id'] != 4)
+          .toList();
+
+      return _estaCargando
+          ? const Center(child: CircularProgressIndicator())
+          : pedidosPendientes.isEmpty
           ? const Center(child: Text('No hay pedidos recientes'))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
-              itemCount: _listaPedidos.length,
+              itemCount: pedidosPendientes.length,
               separatorBuilder: (_, _) => const Divider(),
               itemBuilder: (context, i) {
-                final pedido = _listaPedidos[i];
+                final pedido = pedidosPendientes[i];
                 final detalles =
                     (pedido['detalle_pedido'] as List<dynamic>? ?? []);
 
