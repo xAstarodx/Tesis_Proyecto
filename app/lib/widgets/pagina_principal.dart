@@ -22,35 +22,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final String _search = '';
   String? _error;
 
-  void _mostrarDetallesPagoMovil() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Datos para Pago Movil'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Banco: Banesco (0134)'),
-              SizedBox(height: 8),
-              Text('Telefono: 0412-1234567'),
-              SizedBox(height: 8),
-              Text('C.I: V-12.345.678'),
-              SizedBox(height: 8),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -158,17 +129,6 @@ class _MyHomePageState extends State<MyHomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            ElevatedButton.icon(
-              onPressed: _mostrarDetallesPagoMovil,
-              icon: const Icon(Icons.phone_android),
-              label: const Text('Ver datos para Pago Móvil'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 40),
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())

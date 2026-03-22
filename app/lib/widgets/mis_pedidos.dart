@@ -51,33 +51,29 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
       onUpdate: (payload) {
         final newRecord = payload.newRecord;
 
-        if (newRecord != null) {
-          final pedidoId = newRecord['pedido_id'];
-          final nuevoEstado = newRecord['estado_id'];
+        final pedidoId = newRecord['pedido_id'];
+        final nuevoEstado = newRecord['estado_id'];
 
-          // Buscamos el estado que tenía este pedido en nuestra lista local
-          final pedidoLocal = _pedidos.firstWhere(
-            (p) => p['pedido_id'] == pedidoId,
-            orElse: () => {},
-          );
-          final estadoAnterior = pedidoLocal.isNotEmpty
-              ? pedidoLocal['estado_id']
-              : null;
+        // Buscamos el estado que tenía este pedido en nuestra lista local
+        final pedidoLocal = _pedidos.firstWhere(
+          (p) => p['pedido_id'] == pedidoId,
+          orElse: () => {},
+        );
+        final estadoAnterior = pedidoLocal.isNotEmpty
+            ? pedidoLocal['estado_id']
+            : null;
 
-          // Solo notificamos si el estado cambió a 2 (Listo) y antes NO era 2
-          if (nuevoEstado == 2 && estadoAnterior != 2) {
-            _reproducirSonidoNotificacion();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '¡Tu pedido #$pedidoId está listo para recoger!',
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 5),
-                ),
-              );
-            }
+        // Solo notificamos si el estado cambió a 2 (Listo) y antes NO era 2
+        if (nuevoEstado == 2 && estadoAnterior != 2) {
+          _reproducirSonidoNotificacion();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('¡Tu pedido #$pedidoId está listo para recoger!'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 5),
+              ),
+            );
           }
         }
         // Recargar la lista para mostrar el estado actualizado

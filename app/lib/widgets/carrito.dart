@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/cart_model.dart';
 import '../services/supabase_service.dart';
@@ -26,6 +27,57 @@ class _CarritoPageState extends State<CarritoPage> {
   void dispose() {
     _referenciaController.dispose();
     super.dispose();
+  }
+
+  Widget _buildDatoPago(String titulo, String valor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                titulo,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                valor,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy, color: Colors.blue),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: valor));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('$titulo copiado'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            tooltip: 'Copiar $titulo',
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _cargarFormasPago() async {
@@ -108,11 +160,37 @@ class _CarritoPageState extends State<CarritoPage> {
                         );
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           setStateDialog(() => formaPagoId = val);
+                        }
                       },
                     ),
                   if (esPagoMovil) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Datos Bancarios:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildDatoPago('Banco', 'Banesco (0134)'),
+                          _buildDatoPago('Teléfono', '0412-1234567'),
+                          _buildDatoPago('Cédula', 'V-12.345.678'),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     const Text(
                       'Datos del Pago Móvil:',

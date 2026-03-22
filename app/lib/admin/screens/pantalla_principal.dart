@@ -331,8 +331,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Wrap(
+                alignment: WrapAlignment.spaceEvenly,
+                spacing: 8.0,
+                runSpacing: 8.0,
                 children: [
                   ElevatedButton.icon(
                     icon: const Icon(Icons.check_circle_outline),
@@ -390,7 +392,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             }
                           },
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.payment),
                     label: const Text('Pagado'),
@@ -399,12 +400,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: pedido['estado_id'] == 4
-                        ? null // Disable if already paid
+                        ? null
                         : () async {
                             try {
                               await productoService.actualizarEstadoPedido(
                                 pedido['pedido_id'],
-                                4, // Estado 'Pagado'
+                                4,
                               );
                               Navigator.of(ctx).pop();
                               _cargarDatos();
@@ -496,23 +497,22 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
-            if (_tasaCambioValor != null)
-              Column(
-                children: [
-                  Text(
-                    '${_tasaCambioValor.toStringAsFixed(2)} bs = 1\$',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+            Column(
+              children: [
+                Text(
+                  '${_tasaCambioValor.toStringAsFixed(2)} bs = 1\$',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '1\$',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '1\$',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
