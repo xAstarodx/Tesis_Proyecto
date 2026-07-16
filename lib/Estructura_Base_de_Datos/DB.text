@@ -1,0 +1,103 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.categoria (
+  categoria_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre_categoria text NOT NULL,
+  CONSTRAINT categoria_pkey PRIMARY KEY (categoria_id)
+);
+CREATE TABLE public.datos_pago_orden (
+  pedido_id bigint NOT NULL,
+  referencia text,
+  comprobante_url text,
+  CONSTRAINT datos_pago_orden_pkey PRIMARY KEY (pedido_id),
+  CONSTRAINT datos_pago_orden_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedido(pedido_id)
+);
+CREATE TABLE public.detalle_pago (
+  detalle_pago_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_pago uuid NOT NULL,
+  forma_pago_id bigint NOT NULL,
+  id_taza bigint,
+  monto_pagado numeric NOT NULL,
+  referencia text,
+  comprobante_url text,
+  fecha_registro timestamp with time zone DEFAULT now(),
+  CONSTRAINT detalle_pago_pkey PRIMARY KEY (detalle_pago_id),
+  CONSTRAINT detalle_pago_id_pago_fkey FOREIGN KEY (id_pago) REFERENCES public.registro_pagos(id_pago),
+  CONSTRAINT detalle_pago_forma_pago_fkey FOREIGN KEY (forma_pago_id) REFERENCES public.forma_pago(forma_pago_id),
+  CONSTRAINT detalle_pago_id_taza_fkey FOREIGN KEY (id_taza) REFERENCES public.tasa_dolar(id_tasa)
+);
+CREATE TABLE public.detalle_pedido (
+  pedido_id bigint NOT NULL,
+  producto_id bigint NOT NULL,
+  cantidad integer NOT NULL CHECK (cantidad > 0),
+  precio_unitario numeric NOT NULL,
+  Descripcion text,
+  CONSTRAINT detalle_pedido_pkey PRIMARY KEY (pedido_id, producto_id),
+  CONSTRAINT detalle_pedido_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedido(pedido_id),
+  CONSTRAINT detalle_pedido_producto_id_fkey FOREIGN KEY (producto_id) REFERENCES public.productos(producto_id)
+);
+CREATE TABLE public.estado (
+  estado_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  etiqueta text NOT NULL,
+  CONSTRAINT estado_pkey PRIMARY KEY (estado_id)
+);
+CREATE TABLE public.forma_pago (
+  forma_pago_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre_metodo text NOT NULL,
+  CONSTRAINT forma_pago_pkey PRIMARY KEY (forma_pago_id)
+);
+CREATE TABLE public.pedido (
+  pedido_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  fecha_creacion timestamp with time zone DEFAULT now(),
+  usuario_id uuid,
+  estado_id bigint,
+  hora_recogida text,
+  forma_pago_id bigint,
+  nota text,
+  CONSTRAINT pedido_pkey PRIMARY KEY (pedido_id),
+  CONSTRAINT pedido_estado_id_fkey FOREIGN KEY (estado_id) REFERENCES public.estado(estado_id),
+  CONSTRAINT pedido_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(usuario_id),
+  CONSTRAINT pedido_forma_pago_id_fkey FOREIGN KEY (forma_pago_id) REFERENCES public.forma_pago(forma_pago_id)
+);
+CREATE TABLE public.productos (
+  producto_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre text NOT NULL,
+  descripcion text,
+  precio numeric NOT NULL,
+  stock integer NOT NULL DEFAULT 0,
+  categoria_id bigint,
+  imagen_url text,
+  CONSTRAINT productos_pkey PRIMARY KEY (producto_id),
+  CONSTRAINT productos_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.categoria(categoria_id)
+);
+CREATE TABLE public.registro_pagos (
+  id_pago uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_pedido bigint,
+  monto_total_pedido numeric NOT NULL,
+  fecha_pago timestamp with time zone DEFAULT now(),
+  CONSTRAINT registro_pagos_pkey PRIMARY KEY (id_pago),
+  CONSTRAINT registro_pagos_id_pedido_fkey FOREIGN KEY (id_pedido) REFERENCES public.pedido(pedido_id)
+);
+CREATE TABLE public.roles (
+  rol_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  rol character varying NOT NULL,
+  CONSTRAINT roles_pkey PRIMARY KEY (rol_id)
+);
+CREATE TABLE public.tasa_dolar (
+  id_tasa bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  clave text NOT NULL,
+  valor numeric NOT NULL,
+  fecha_mod timestamp with time zone DEFAULT now(),
+  CONSTRAINT configuracion_pkey PRIMARY KEY (id_tasa)
+);
+CREATE TABLE public.usuario (
+  usuario_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  nombre text NOT NULL,
+  correo character varying NOT NULL UNIQUE,
+  rol_id bigint,
+  fecha_creacion timestamp with time zone DEFAULT now(),
+  CONSTRAINT usuario_pkey PRIMARY KEY (usuario_id),
+  CONSTRAINT usuario_rol_id_fkey FOREIGN KEY (rol_id) REFERENCES public.roles(rol_id),
+  CONSTRAINT usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES auth.users(id)
+);

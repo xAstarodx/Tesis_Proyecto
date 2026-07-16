@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "App Pedidos (Dev)",
+            "request": "launch",
+            "type": "dart",
+            "toolArgs": [
+                "--dart-define", "SUPABASE_URL=https://qimcbnumzypyxhnvimjt.supabase.co",
+                "--dart-define", "SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpbWNibnVtenlweXhobnZpbWp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwOTIxMjQsImV4cCI6MjA4NjY2ODEyNH0.qaYnTLRkLRpXjkuS194zjBz51IIVYFCa6KuRqJOEBxw"
+            ]
+        }
+    ]
+}
