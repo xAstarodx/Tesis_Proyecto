@@ -28,6 +28,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   DateTime? _fechaFinReporte;
 
   static const List<String> _titulos = [
+    'Dashboard',
     'Productos',
     'Pedidos',
     'Pagados',
@@ -35,6 +36,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     'Reporte',
   ];
   static const List<IconData> _iconos = [
+    Icons.dashboard_rounded,
     Icons.store,
     Icons.list_alt,
     Icons.history,
@@ -678,6 +680,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     final int pedidosNuevos = _listaPedidos
         .where((p) => p['estado_id'] == 1)
         .length;
+    // El índice de Pedidos ahora es 2 (Dashboard=0, Productos=1, Pedidos=2)
 
     return Scaffold(
       appBar: AppBar(
@@ -761,7 +764,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: (i == 1 && pedidosNuevos > 0)
+                        child: (i == 2 && pedidosNuevos > 0)
                             ? Badge(
                                 label: Text('$pedidosNuevos'),
                                 backgroundColor: AppTheme.errorColor,
@@ -837,8 +840,422 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
+  /// Calcula los productos más y menos vendidos a partir de los pedidos.
+  List<MapEntry<String, int>> _calcularProductosPorVentas() {
+    final Map<String, int> conteo = {};
+    for (final pedido in _listaPedidos) {
+      final detalles = pedido['detalle_pedido'] as List<dynamic>? ?? [];
+      for (final detalle in detalles) {
+        final nombre = detalle['productos']?['nombre'] as String? ?? 'Desconocido';
+        final cantidad = (detalle['cantidad'] as num?)?.toInt() ?? 0;
+        conteo[nombre] = (conteo[nombre] ?? 0) + cantidad;
+      }
+    }
+    final entries = conteo.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return entries;
+  }
+
+  Widget _construirDashboard() {
+    final ventasPorProducto = _calcularProductosPorVentas();
+    final int totalPedidos = _listaPedidos.length;
+    final int pedidosPendientes = _listaPedidos.where((p) => p['estado_id'] == 1).length;
+    final int pedidosCompletados = _listaPedidos.where((p) => p['estado_id'] == 6 || p['estado_id'] == 4).length;
+    final int totalProductos = _todosLosProductos.length;
+
+    // Top 5 más vendidos
+    final masVendidos = ventasPorProducto.take(5).toList();
+    // Top 5 menos vendidos (con al menos 1 venta)
+    final menosVendidos = ventasPorProducto.reversed.take(5).toList();
+    // Productos sin ventas
+    final nombresConVentas = ventasPorProducto.map((e) => e.key).toSet();
+    final sinVentas = _todosLosProductos
+        .where((p) => !nombresConVentas.contains(p['nombre']))
+        .toList();
+
+    final int maxVentas = masVendidos.isNotEmpty ? masVendidos.first.value : 1;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Encabezado ──────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.dashboard_rounded, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'Dashboard',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Resumen general de ventas y productos',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Tarjetas de resumen ─────────────────────────────────────
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final crossCount = constraints.maxWidth > 600 ? 4 : 2;
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: crossCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.6,
+                children: [
+                  _tarjetaResumen(
+                    'Total Pedidos',
+                    '$totalPedidos',
+                    Icons.receipt_long_rounded,
+                    AppTheme.primaryColor,
+                  ),
+                  _tarjetaResumen(
+                    'Pendientes',
+                    '$pedidosPendientes',
+                    Icons.hourglass_empty_rounded,
+                    AppTheme.warningColor,
+                  ),
+                  _tarjetaResumen(
+                    'Completados',
+                    '$pedidosCompletados',
+                    Icons.check_circle_rounded,
+                    AppTheme.successColor,
+                  ),
+                  _tarjetaResumen(
+                    'Productos',
+                    '$totalProductos',
+                    Icons.store_rounded,
+                    AppTheme.accentColor,
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // ── Más vendidos ────────────────────────────────────────────
+          _seccionTitulo(
+            '🏆 Productos más vendidos',
+            AppTheme.successColor,
+          ),
+          const SizedBox(height: 12),
+          masVendidos.isEmpty
+              ? _mensajeVacio('No hay datos de ventas aún')
+              : Column(
+                  children: masVendidos.asMap().entries.map((entry) {
+                    final rank = entry.key + 1;
+                    final nombre = entry.value.key;
+                    final cantidad = entry.value.value;
+                    final porcentaje = maxVentas > 0 ? cantidad / maxVentas : 0.0;
+                    return _filaProducto(
+                      rank: rank,
+                      nombre: nombre,
+                      cantidad: cantidad,
+                      porcentaje: porcentaje,
+                      color: AppTheme.successColor,
+                      esMasVendido: true,
+                    );
+                  }).toList(),
+                ),
+          const SizedBox(height: 24),
+
+          // ── Menos vendidos ──────────────────────────────────────────
+          _seccionTitulo(
+            '📉 Productos menos vendidos',
+            AppTheme.warningColor,
+          ),
+          const SizedBox(height: 12),
+          menosVendidos.isEmpty
+              ? _mensajeVacio('No hay datos de ventas aún')
+              : Column(
+                  children: menosVendidos.asMap().entries.map((entry) {
+                    final nombre = entry.value.key;
+                    final cantidad = entry.value.value;
+                    final porcentaje = maxVentas > 0 ? cantidad / maxVentas : 0.0;
+                    return _filaProducto(
+                      rank: null,
+                      nombre: nombre,
+                      cantidad: cantidad,
+                      porcentaje: porcentaje,
+                      color: AppTheme.warningColor,
+                      esMasVendido: false,
+                    );
+                  }).toList(),
+                ),
+
+          // ── Sin ventas ──────────────────────────────────────────────
+          if (sinVentas.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _seccionTitulo('⚠️ Sin ventas registradas', AppTheme.errorColor),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: sinVentas.map((p) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.errorColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.remove_shopping_cart_rounded,
+                        size: 16,
+                        color: AppTheme.errorColor.withValues(alpha: 0.7),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        p['nombre'] ?? 'Sin nombre',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.errorColor.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _tarjetaResumen(
+    String titulo,
+    String valor,
+    IconData icono,
+    Color color,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(icono, color: color, size: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                valor,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Text(
+                titulo,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _seccionTitulo(String titulo, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          titulo,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _mensajeVacio(String mensaje) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          mensaje,
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _filaProducto({
+    required int? rank,
+    required String nombre,
+    required int cantidad,
+    required double porcentaje,
+    required Color color,
+    required bool esMasVendido,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (rank != null) ...[
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: rank == 1
+                        ? const Color(0xFFFFD700)
+                        : rank == 2
+                        ? const Color(0xFFC0C0C0)
+                        : rank == 3
+                        ? const Color(0xFFCD7F32)
+                        : color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '#$rank',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: rank <= 3 ? Colors.white : color,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  nombre,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$cantidad uds',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: porcentaje.clamp(0.0, 1.0),
+              backgroundColor: color.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _construirCuerpoSegunIndice(int indice) {
-    if (indice == 3) {
+    if (indice == 0) return _construirDashboard();
+    if (indice == 4) {
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
@@ -1030,7 +1447,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       );
     }
 
-    if (indice == 4) {
+    if (indice == 5) {
       return LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 750;
@@ -1299,7 +1716,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       );
     }
 
-    if (indice == 2) {
+    if (indice == 3) {
       final query = _textoBusquedaPedidos.toLowerCase();
       final pedidosPagados = _listaPedidos
           .where((p) => p['estado_id'] == 4 || p['estado_id'] == 6)
@@ -1552,7 +1969,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       );
     }
 
-    if (indice == 1) {
+    if (indice == 2) {
       final query = _textoBusquedaPedidos.toLowerCase();
       final pedidosPendientes = _listaPedidos
 
@@ -1588,19 +2005,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     color: AppTheme.textPrimary,
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _estaCargando ? null : _generarPDFReportePedidosPendientes,
-                  icon: const Icon(Icons.picture_as_pdf, size: 16),
-                  label: const Text('Reporte PDF', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
+                
               ],
             ),
           ),
