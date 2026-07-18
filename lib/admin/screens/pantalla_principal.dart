@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pdf/pdf.dart';
@@ -1297,6 +1298,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*[,.]?\d*'),
+                        ),
+                      ],
                       decoration: const InputDecoration(
                         labelText: 'Bs por 1\$',
                       ),
@@ -2605,9 +2611,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     controller: controladorCantidad,
                     decoration: const InputDecoration(labelText: 'Cantidad'),
                     keyboardType: TextInputType.number,
-                    validator: (v) => (v == null || int.tryParse(v) == null)
-                        ? 'Número inválido'
-                        : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Número inválido';
+                      final n = int.tryParse(v);
+                      if (n == null) return 'Número inválido';
+                      if (n < 0) return 'La cantidad no puede ser negativa';
+                      return null;
+                    },
                   ),
                   TextFormField(
                     controller: controladorPrecio,
@@ -2617,11 +2630,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    validator: (v) =>
-                        (v == null ||
-                            double.tryParse(v.replaceAll(',', '.')) == null)
-                        ? 'Precio inválido'
-                        : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[,.]?\d*'),
+                      ),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Precio inválido';
+                      final p = double.tryParse(v.replaceAll(',', '.'));
+                      if (p == null) return 'Precio inválido';
+                      if (p <= 0) return 'El precio debe ser mayor a cero';
+                      return null;
+                    },
                   ),
                 ],
               ),
@@ -2807,9 +2827,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     controller: controladorCantidad,
                     decoration: const InputDecoration(labelText: 'Cantidad'),
                     keyboardType: TextInputType.number,
-                    validator: (v) => (v == null || int.tryParse(v) == null)
-                        ? 'Inválido'
-                        : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Inválido';
+                      final n = int.tryParse(v);
+                      if (n == null) return 'Inválido';
+                      if (n < 0) return 'La cantidad no puede ser negativa';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -2820,11 +2847,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    validator: (v) =>
-                        (v == null ||
-                            double.tryParse(v.replaceAll(',', '.')) == null)
-                        ? 'Inválido'
-                        : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*[,.]?\d*'),
+                      ),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Inválido';
+                      final p = double.tryParse(v.replaceAll(',', '.'));
+                      if (p == null) return 'Inválido';
+                      if (p <= 0) return 'El precio debe ser mayor a cero';
+                      return null;
+                    },
                   ),
                 ],
               ),

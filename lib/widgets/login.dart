@@ -29,11 +29,16 @@ class _LoginPageState extends State<LoginPage> {
 
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
-    ) {
+    ) async {
       final session = data.session;
       if (session != null && mounted) {
         final correo = session.user.email;
-        if (correo == 'noheljosue2307@gmail.com') {
+        if (correo == null) return;
+
+        final isAdmin = await _servicioSupabase.esAdmin(correo);
+        if (!mounted) return;
+
+        if (isAdmin) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const PantallaPrincipal()),
@@ -70,7 +75,10 @@ class _LoginPageState extends State<LoginPage> {
       await _servicioSupabase.iniciarSesion(correo, contrasena);
 
       if (mounted) {
-        if (correo == 'noheljosue2307@gmail.com') {
+        final isAdmin = await _servicioSupabase.esAdmin(correo);
+        if (!mounted) return;
+
+        if (isAdmin) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const PantallaPrincipal()),

@@ -74,6 +74,24 @@ class SupabaseService {
     await _cliente.auth.signOut();
   }
 
+  /// Verifica en la base de datos si el usuario actual tiene rol de administrador.
+  /// Devuelve [true] si la columna `rol_id` del registro en `usuario` es 2.
+  Future<bool> esAdmin(String email) async {
+    try {
+      final data = await _cliente
+          .from('usuario')
+          .select('rol_id')
+          .eq('correo', email)
+          .maybeSingle();
+
+      if (data == null) return false;
+      return (data['rol_id'] as num?)?.toInt() == 2;
+    } catch (e) {
+      debugPrint('Error al verificar rol de admin: $e');
+      return false;
+    }
+  }
+
   Future<AuthResponse> registrarUsuario(
     String email,
     String password, {
