@@ -910,8 +910,7 @@ class _CarritoPageState extends State<CarritoPage> {
             controller: _mensajeAdminController,
             maxLines: 3,
             decoration: const InputDecoration(
-              labelText: 'Mensaje adicional',
-              hintText: 'Ej: Quiero pagar por partes...',
+              labelText: 'Puede usarlo si va a Pagar por Partes',
               prefixIcon: Icon(
                 Icons.message_outlined,
                 color: AppTheme.primaryColor,

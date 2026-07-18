@@ -664,7 +664,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
-
+      // Ignorar error al cerrar sesión
     }
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -675,170 +675,363 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-
-    final int pedidosNuevos = _listaPedidos
-        .where((p) => p['estado_id'] == 1)
-        .length;
-    // El índice de Pedidos ahora es 2 (Dashboard=0, Productos=1, Pedidos=2)
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Panel de Administración'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: pedidosNuevos > 0
-                ? Badge(
-                    label: Text('$pedidosNuevos'),
-                    backgroundColor: AppTheme.errorColor,
-                    child: const Icon(Icons.menu),
-                  )
-                : const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _cargarDatos,
-            tooltip: 'Actualizar',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _cerrarSesion,
-            tooltip: 'Cerrar sesión',
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: AppTheme.primaryGradient,
+  Widget _construirDrawer(int pedidosNuevos) {
+    return Drawer(
+      child: Column(
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+            ),
+            accountName: const Text(
+              'Administrador',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+            accountEmail: const Text(
+              'Panel de Control',
+              style: TextStyle(fontSize: 13),
+            ),
+            currentAccountPicture: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
               ),
-              accountName: const Text(
-                'Administrador',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-              ),
-              accountEmail: const Text(
-                'Panel de Control',
-                style: TextStyle(fontSize: 13),
-              ),
-              currentAccountPicture: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Icon(
-                  Icons.admin_panel_settings,
-                  color: AppTheme.primaryColor,
-                  size: 32,
-                ),
+              child: const Icon(
+                Icons.admin_panel_settings,
+                color: AppTheme.primaryColor,
+                size: 32,
               ),
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    child: Text(
-                      'SECCIONES',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 1,
-                      ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Text(
+                    'SECCIONES',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                      letterSpacing: 1,
                     ),
                   ),
-                  for (int i = 0; i < _titulos.length; i++)
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _indiceSeleccionado == i
-                              ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: (i == 2 && pedidosNuevos > 0)
-                            ? Badge(
-                                label: Text('$pedidosNuevos'),
-                                backgroundColor: AppTheme.errorColor,
-                                child: Icon(
-                                  _iconos[i],
-                                  color: _indiceSeleccionado == i
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.textSecondary,
-                                  size: 20,
-                                ),
-                              )
-                            : Icon(
+                ),
+                for (int i = 0; i < _titulos.length; i++)
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _indiceSeleccionado == i
+                            ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: (i == 2 && pedidosNuevos > 0)
+                          ? Badge(
+                              label: Text('$pedidosNuevos'),
+                              backgroundColor: AppTheme.errorColor,
+                              child: Icon(
                                 _iconos[i],
                                 color: _indiceSeleccionado == i
                                     ? AppTheme.primaryColor
                                     : AppTheme.textSecondary,
                                 size: 20,
                               ),
-                      ),
-                      title: Text(
-                        _titulos[i],
-                        style: TextStyle(
-                          fontWeight: _indiceSeleccionado == i
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          color: _indiceSeleccionado == i
-                              ? AppTheme.primaryColor
-                              : AppTheme.textPrimary,
-                        ),
-                      ),
-                      selected: _indiceSeleccionado == i,
-                      selectedTileColor: AppTheme.primaryColor.withValues(
-                        alpha: 0.05,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      onTap: () {
-                        _alTocarItem(i);
-                        Navigator.pop(context);
-                      },
+                            )
+                          : Icon(
+                              _iconos[i],
+                              color: _indiceSeleccionado == i
+                                  ? AppTheme.primaryColor
+                                  : AppTheme.textSecondary,
+                              size: 20,
+                            ),
                     ),
-                  const Divider(height: 32),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.errorColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.logout,
-                        color: AppTheme.errorColor,
-                        size: 20,
+                    title: Text(
+                      _titulos[i],
+                      style: TextStyle(
+                        fontWeight: _indiceSeleccionado == i
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: _indiceSeleccionado == i
+                            ? AppTheme.primaryColor
+                            : AppTheme.textPrimary,
                       ),
                     ),
-                    title: const Text(
-                      'Cerrar sesión',
-                      style: TextStyle(fontWeight: FontWeight.w500),
+                    selected: _indiceSeleccionado == i,
+                    selectedTileColor: AppTheme.primaryColor.withValues(
+                      alpha: 0.05,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     onTap: () {
+                      _alTocarItem(i);
                       Navigator.pop(context);
-                      _cerrarSesion();
                     },
                   ),
+                const Divider(height: 32),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.logout,
+                      color: AppTheme.errorColor,
+                      size: 20,
+                    ),
+                  ),
+                  title: const Text(
+                    'Cerrar sesión',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _cerrarSesion();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _construirSidebarPersistente(int pedidosNuevos) {
+    return Container(
+      width: 270,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 5,
+            offset: Offset(2, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppTheme.dividerColor, width: 0.5),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings,
+                    color: AppTheme.primaryColor,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Administrador',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Panel de Control',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              children: [
+                Text(
+                  '  Navegación',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.8),
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (int i = 0; i < _titulos.length; i++) ...[
+                  ListTile(
+                    leading: (i == 2 && pedidosNuevos > 0)
+                        ? Badge(
+                            label: Text('$pedidosNuevos'),
+                            backgroundColor: AppTheme.errorColor,
+                            child: Icon(
+                              _iconos[i],
+                              color: _indiceSeleccionado == i
+                                  ? AppTheme.primaryColor
+                                  : AppTheme.textSecondary,
+                              size: 20,
+                            ),
+                          )
+                        : Icon(
+                            _iconos[i],
+                            color: _indiceSeleccionado == i
+                                ? AppTheme.primaryColor
+                                : AppTheme.textSecondary,
+                            size: 20,
+                          ),
+                    title: Text(
+                      _titulos[i],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: _indiceSeleccionado == i
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: _indiceSeleccionado == i
+                            ? AppTheme.primaryColor
+                            : AppTheme.textPrimary,
+                      ),
+                    ),
+                    selected: _indiceSeleccionado == i,
+                    selectedTileColor: AppTheme.primaryColor.withValues(
+                      alpha: 0.08,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    onTap: () => _alTocarItem(i),
+                  ),
+                  const SizedBox(height: 4),
                 ],
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: AppTheme.dividerColor, width: 0.5),
+              ),
+            ),
+            child: ListTile(
+              leading: const Icon(
+                Icons.logout,
+                color: AppTheme.errorColor,
+                size: 20,
+              ),
+              title: const Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.errorColor,
+                ),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              onTap: _cerrarSesion,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int pedidosNuevos = _listaPedidos
+        .where((p) => p['estado_id'] == 1)
+        .length;
+
+    final double anchoPantalla = MediaQuery.of(context).size.width;
+    final bool esPantallaAncha = anchoPantalla > 950;
+
+    Widget cuerpo = _construirCuerpoSegunIndice(_indiceSeleccionado);
+
+    if (esPantallaAncha) {
+      return Scaffold(
+        body: Row(
+          children: [
+            _construirSidebarPersistente(pedidosNuevos),
+            Expanded(
+              child: Scaffold(
+                appBar: AppBar(
+                  title: Text(_titulos[_indiceSeleccionado]),
+                  automaticallyImplyLeading: false,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _cargarDatos,
+                      tooltip: 'Actualizar',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.logout),
+                      onPressed: _cerrarSesion,
+                      tooltip: 'Cerrar sesión',
+                    ),
+                  ],
+                ),
+                body: cuerpo,
               ),
             ),
           ],
         ),
-      ),
-      body: _construirCuerpoSegunIndice(_indiceSeleccionado),
-    );
+      );
+    } else {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_titulos[_indiceSeleccionado]),
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: pedidosNuevos > 0
+                  ? Badge(
+                      label: Text('$pedidosNuevos'),
+                      backgroundColor: AppTheme.errorColor,
+                      child: const Icon(Icons.menu),
+                    )
+                  : const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _cargarDatos,
+              tooltip: 'Actualizar',
+            ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: _cerrarSesion,
+              tooltip: 'Cerrar sesión',
+            ),
+          ],
+        ),
+        drawer: _construirDrawer(pedidosNuevos),
+        body: cuerpo,
+      );
+    }
   }
 
   /// Calcula los productos más y menos vendidos a partir de los pedidos.
@@ -930,14 +1123,28 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           // ── Tarjetas de resumen ─────────────────────────────────────
           LayoutBuilder(
             builder: (context, constraints) {
-              final crossCount = constraints.maxWidth > 600 ? 4 : 2;
+              int crossCount = 2;
+              double aspectRatio = 1.6;
+              if (constraints.maxWidth > 1100) {
+                crossCount = 4;
+                aspectRatio = 2.2;
+              } else if (constraints.maxWidth > 700) {
+                crossCount = 4;
+                aspectRatio = 1.6;
+              } else if (constraints.maxWidth > 400) {
+                crossCount = 2;
+                aspectRatio = 1.8;
+              } else {
+                crossCount = 1;
+                aspectRatio = 2.5;
+              }
               return GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: crossCount,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 1.6,
+                childAspectRatio: aspectRatio,
                 children: [
                   _tarjetaResumen(
                     'Total Pedidos',
@@ -969,55 +1176,65 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           const SizedBox(height: 24),
 
-          // ── Más vendidos ────────────────────────────────────────────
-          _seccionTitulo(
-            '🏆 Productos más vendidos',
-            AppTheme.successColor,
+          // ── Sección de Listas de Productos Vendidos (Responsivo) ─────
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool esAncho = constraints.maxWidth > 900;
+              if (esAncho) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _seccionTitulo(
+                            '🏆 Productos más vendidos',
+                            AppTheme.successColor,
+                          ),
+                          const SizedBox(height: 12),
+                          _listaProductosMasVendidos(masVendidos, maxVentas),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _seccionTitulo(
+                            '📉 Productos menos vendidos',
+                            AppTheme.warningColor,
+                          ),
+                          const SizedBox(height: 12),
+                          _listaProductosMenosVendidos(menosVendidos, maxVentas),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _seccionTitulo(
+                      '🏆 Productos más vendidos',
+                      AppTheme.successColor,
+                    ),
+                    const SizedBox(height: 12),
+                    _listaProductosMasVendidos(masVendidos, maxVentas),
+                    const SizedBox(height: 24),
+                    _seccionTitulo(
+                      '📉 Productos menos vendidos',
+                      AppTheme.warningColor,
+                    ),
+                    const SizedBox(height: 12),
+                    _listaProductosMenosVendidos(menosVendidos, maxVentas),
+                  ],
+                );
+              }
+            },
           ),
-          const SizedBox(height: 12),
-          masVendidos.isEmpty
-              ? _mensajeVacio('No hay datos de ventas aún')
-              : Column(
-                  children: masVendidos.asMap().entries.map((entry) {
-                    final rank = entry.key + 1;
-                    final nombre = entry.value.key;
-                    final cantidad = entry.value.value;
-                    final porcentaje = maxVentas > 0 ? cantidad / maxVentas : 0.0;
-                    return _filaProducto(
-                      rank: rank,
-                      nombre: nombre,
-                      cantidad: cantidad,
-                      porcentaje: porcentaje,
-                      color: AppTheme.successColor,
-                      esMasVendido: true,
-                    );
-                  }).toList(),
-                ),
-          const SizedBox(height: 24),
-
-          // ── Menos vendidos ──────────────────────────────────────────
-          _seccionTitulo(
-            '📉 Productos menos vendidos',
-            AppTheme.warningColor,
-          ),
-          const SizedBox(height: 12),
-          menosVendidos.isEmpty
-              ? _mensajeVacio('No hay datos de ventas aún')
-              : Column(
-                  children: menosVendidos.asMap().entries.map((entry) {
-                    final nombre = entry.value.key;
-                    final cantidad = entry.value.value;
-                    final porcentaje = maxVentas > 0 ? cantidad / maxVentas : 0.0;
-                    return _filaProducto(
-                      rank: null,
-                      nombre: nombre,
-                      cantidad: cantidad,
-                      porcentaje: porcentaje,
-                      color: AppTheme.warningColor,
-                      esMasVendido: false,
-                    );
-                  }).toList(),
-                ),
 
           // ── Sin ventas ──────────────────────────────────────────────
           if (sinVentas.isNotEmpty) ...[
@@ -1064,6 +1281,47 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ],
       ),
     );
+  }
+
+  Widget _listaProductosMasVendidos(List<MapEntry<String, int>> masVendidos, int maxVentas) {
+    return masVendidos.isEmpty
+        ? _mensajeVacio('No hay datos de ventas aún')
+        : Column(
+            children: masVendidos.asMap().entries.map((entry) {
+              final rank = entry.key + 1;
+              final nombre = entry.value.key;
+              final cantidad = entry.value.value;
+              final porcentaje = maxVentas > 0 ? cantidad / maxVentas : 0.0;
+              return _filaProducto(
+                rank: rank,
+                nombre: nombre,
+                cantidad: cantidad,
+                porcentaje: porcentaje,
+                color: AppTheme.successColor,
+                esMasVendido: true,
+              );
+            }).toList(),
+          );
+  }
+
+  Widget _listaProductosMenosVendidos(List<MapEntry<String, int>> menosVendidos, int maxVentas) {
+    return menosVendidos.isEmpty
+        ? _mensajeVacio('No hay datos de ventas aún')
+        : Column(
+            children: menosVendidos.asMap().entries.map((entry) {
+              final nombre = entry.value.key;
+              final cantidad = entry.value.value;
+              final porcentaje = maxVentas > 0 ? cantidad / maxVentas : 0.0;
+              return _filaProducto(
+                rank: null,
+                nombre: nombre,
+                cantidad: cantidad,
+                porcentaje: porcentaje,
+                color: AppTheme.warningColor,
+                esMasVendido: false,
+              );
+            }).toList(),
+          );
   }
 
   Widget _tarjetaResumen(
@@ -1133,7 +1391,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         const SizedBox(width: 10),
         Text(
           titulo,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: AppTheme.textPrimary,
@@ -1382,7 +1640,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           try {
                             fecha = DateTime.parse(fechaMod);
                           } catch (e) {
-
+                            // Ignorar error de análisis de fecha
                           }
                         }
 
@@ -2348,153 +2606,180 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 )
               : RefreshIndicator(
                   onRefresh: _cargarDatos,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                    itemCount: _todosLosProductos.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) {
-                      final producto = _todosLosProductos[i];
-                      final categoria = _categorias.firstWhere(
-                        (cat) =>
-                            cat['categoria_id'] == producto['categoria_id'],
-                        orElse: () => {'nombre_categoria': 'Sin categoría'},
-                      );
-                      final categoriaEtiqueta =
-                          (categoria['nombre_categoria'] as String?) ??
-                          'Sin categoría';
-                      final precioUsd =
-                          (producto['precio'] as num?)?.toDouble() ?? 0.0;
-                      final stock = (producto['stock'] as num?)?.toInt() ?? 0;
-
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        elevation: 1,
-                        child: InkWell(
-                          onTap: () => _mostrarDialogoEditarProducto(producto),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: AppTheme.backgroundColor,
-                                    border: Border.all(color: AppTheme.dividerColor),
-                                  ),
-                                  child: producto['imagen_url'] != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.network(
-                                            producto['imagen_url'],
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, _, _) => const Icon(Icons.restaurant_menu),
-                                          ),
-                                        )
-                                      : const Icon(Icons.restaurant_menu),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        producto['nombre'] ?? 'Sin nombre',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          categoriaEtiqueta,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            stock > 0 ? Icons.inventory : Icons.error_outline,
-                                            size: 14,
-                                            color: stock > 0 ? AppTheme.textSecondary : AppTheme.errorColor,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Stock: $stock',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: stock > 0 ? AppTheme.textSecondary : AppTheme.errorColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        gradient: AppTheme.accentGradient,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '\$${precioUsd.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          constraints: const BoxConstraints(),
-                                          padding: const EdgeInsets.all(4),
-                                          icon: const Icon(Icons.edit_outlined, size: 20),
-                                          color: AppTheme.primaryColor,
-                                          onPressed: () => _mostrarDialogoEditarProducto(producto),
-                                        ),
-                                        IconButton(
-                                          constraints: const BoxConstraints(),
-                                          padding: const EdgeInsets.all(4),
-                                          icon: const Icon(Icons.delete_outline, size: 20),
-                                          color: AppTheme.errorColor,
-                                          onPressed: () => _confirmarEliminarProducto(producto['producto_id']),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final bool esAncho = constraints.maxWidth > 700;
+                      if (esAncho) {
+                        final int columns = constraints.maxWidth > 1100 ? 3 : 2;
+                        return GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: constraints.maxWidth > 1100 ? 2.5 : 2.2,
                           ),
-                        ),
-                      );
+                          itemCount: _todosLosProductos.length,
+                          itemBuilder: (context, i) {
+                            final producto = _todosLosProductos[i];
+                            return _construirTarjetaProducto(producto);
+                          },
+                        );
+                      } else {
+                        return ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                          itemCount: _todosLosProductos.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (context, i) {
+                            final producto = _todosLosProductos[i];
+                            return _construirTarjetaProducto(producto);
+                          },
+                        );
+                      }
                     },
                   ),
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _construirTarjetaProducto(Map<String, dynamic> producto) {
+    final categoria = _categorias.firstWhere(
+      (cat) => cat['categoria_id'] == producto['categoria_id'],
+      orElse: () => {'nombre_categoria': 'Sin categoría'},
+    );
+    final categoriaEtiqueta = (categoria['nombre_categoria'] as String?) ?? 'Sin categoría';
+    final precioUsd = (producto['precio'] as num?)?.toDouble() ?? 0.0;
+    final stock = (producto['stock'] as num?)?.toInt() ?? 0;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      child: InkWell(
+        onTap: () => _mostrarDialogoEditarProducto(producto),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: AppTheme.backgroundColor,
+                  border: Border.all(color: AppTheme.dividerColor),
+                ),
+                child: producto['imagen_url'] != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          producto['imagen_url'],
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const Icon(Icons.restaurant_menu),
+                        ),
+                      )
+                    : const Icon(Icons.restaurant_menu),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      producto['nombre'] ?? 'Sin nombre',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        categoriaEtiqueta,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          stock > 0 ? Icons.inventory : Icons.error_outline,
+                          size: 14,
+                          color: stock > 0 ? AppTheme.textSecondary : AppTheme.errorColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Stock: $stock',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: stock > 0 ? AppTheme.textSecondary : AppTheme.errorColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.accentGradient,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '\$${precioUsd.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(4),
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        color: AppTheme.primaryColor,
+                        onPressed: () => _mostrarDialogoEditarProducto(producto),
+                      ),
+                      IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(4),
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        color: AppTheme.errorColor,
+                        onPressed: () => _confirmarEliminarProducto(producto['producto_id']),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
