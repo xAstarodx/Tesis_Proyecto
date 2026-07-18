@@ -2652,6 +2652,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     final categoriaEtiqueta = (categoria['nombre_categoria'] as String?) ?? 'Sin categoría';
     final precioUsd = (producto['precio'] as num?)?.toDouble() ?? 0.0;
     final stock = (producto['stock'] as num?)?.toInt() ?? 0;
+    final bool esAncho = MediaQuery.of(context).size.width > 700;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -2664,23 +2665,23 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           child: Row(
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: esAncho ? 110 : 60,
+                height: esAncho ? 110 : 60,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(esAncho ? 12 : 8),
                   color: AppTheme.backgroundColor,
                   border: Border.all(color: AppTheme.dividerColor),
                 ),
                 child: producto['imagen_url'] != null
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(esAncho ? 12 : 8),
                         child: Image.network(
                           producto['imagen_url'],
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const Icon(Icons.restaurant_menu),
+                          errorBuilder: (_, _, _) => Icon(Icons.restaurant_menu, size: esAncho ? 40 : 24),
                         ),
                       )
-                    : const Icon(Icons.restaurant_menu),
+                    : Icon(Icons.restaurant_menu, size: esAncho ? 40 : 24),
               ),
               const SizedBox(width: 12),
               Expanded(
