@@ -35,6 +35,11 @@ class _LoginPageState extends State<LoginPage> {
         final correo = session.user.email;
         if (correo == null) return;
 
+        await _servicioSupabase.asegurarUsuario(
+          email: correo,
+          nombre: session.user.userMetadata?['nombre'] as String?,
+        );
+
         final isAdmin = await _servicioSupabase.esAdmin(correo);
         if (!mounted) return;
 

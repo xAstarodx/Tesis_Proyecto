@@ -39,7 +39,6 @@ class _RegisterPageState extends State<RegisterPage> {
       await _servicioSupabase.registrarUsuario(
         correo,
         _controladorContrasena.text.trim(),
-        usuario: usuario,
         nombre: usuario,
       );
 
