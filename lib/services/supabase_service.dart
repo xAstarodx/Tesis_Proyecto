@@ -1,7 +1,11 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/producto_model.dart';
+
+// ponytail: configurar con Web client ID de Google Cloud Console
+const String _googleServerClientId = 'TU_WEB_CLIENT_ID.apps.googleusercontent.com';
 
 class SupabaseService {
   final _cliente = Supabase.instance.client;
@@ -97,54 +101,41 @@ class SupabaseService {
     String password, {
     String? nombre,
   }) async {
-    final response = await _cliente.auth.signUp(
+    final metadatos = <String, dynamic>{};
+    if (nombre != null) metadatos['nombre'] = nombre;
+    metadatos['contraseña'] = password;
+
+    return await _cliente.auth.signUp(
       email: email,
       password: password,
+      data: metadatos,
+    );
+  }
+
+  Future<AuthResponse> iniciarSesionGoogle() async {
+    final googleSignIn = GoogleSignIn(
+      scopes: ['email', 'profile'],
+      serverClientId: _googleServerClientId,
     );
 
-    if (response.user != null) {
-      await _cliente.from('usuario').insert({
-        'usuario_id': response.user!.id,
-        'nombre': nombre ?? email.split('@').first,
-        'correo': email,
-        'rol_id': 1,
-      });
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      throw Exception('Inicio de sesión cancelado');
     }
 
-    return response;
-  }
-
-  Future<bool> iniciarSesionGoogle() async {
-    try {
-      return await _cliente.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'io.supabase.flutter://login-callback/',
+    final googleAuth = await googleUser.authentication;
+    final idToken = googleAuth.idToken;
+    if (idToken == null) {
+      throw Exception(
+        'Token de Google nulo. Configura serverClientId en supabase_service.dart',
       );
-    } catch (e) {
-      rethrow;
     }
-  }
 
-  Future<void> asegurarUsuario({
-    required String email,
-    String? nombre,
-  }) async {
-    final exists = await _cliente
-        .from('usuario')
-        .select('usuario_id')
-        .eq('correo', email)
-        .maybeSingle();
-    if (exists != null) return;
-
-    final user = _cliente.auth.currentUser;
-    if (user == null) return;
-
-    await _cliente.from('usuario').insert({
-      'usuario_id': user.id,
-      'nombre': nombre ?? email.split('@').first,
-      'correo': email,
-      'rol_id': 1,
-    });
+    return await _cliente.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      accessToken: googleAuth.accessToken,
+    );
   }
 
   Future<AuthResponse> iniciarSesion(String email, String password) async {
