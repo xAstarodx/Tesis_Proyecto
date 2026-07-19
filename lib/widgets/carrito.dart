@@ -144,7 +144,7 @@ class _CarritoPageState extends State<CarritoPage> {
       },
     );
     if (picked != null) {
-      // Validar que la hora seleccionada no sea anterior a la hora actual
+      
       final now = TimeOfDay.now();
       final pickedMinutes = picked.hour * 60 + picked.minute;
       final nowMinutes = now.hour * 60 + now.minute;
@@ -161,7 +161,7 @@ class _CarritoPageState extends State<CarritoPage> {
             ),
           );
         }
-        return; // No actualizar la hora seleccionada
+        return; 
       }
 
       setState(() => _horaRecogida = picked.format(context));

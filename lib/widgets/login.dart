@@ -160,9 +160,9 @@ class _LoginPageState extends State<LoginPage> {
 
                           if (!isSmall)
                             Container(
-                              padding: const EdgeInsets.all(24),
+                              width: 112,
+                              height: 112,
                               decoration: BoxDecoration(
-                                color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -171,11 +171,10 @@ class _LoginPageState extends State<LoginPage> {
                                     offset: const Offset(0, 10),
                                   ),
                                 ],
-                              ),
-                              child: const Icon(
-                                Icons.restaurant_menu,
-                                size: 64,
-                                color: AppTheme.primaryColor,
+                                image: const DecorationImage(
+                                  image: AssetImage('assets/imagen/logo.jpg'),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           if (!isSmall) const SizedBox(height: 24),

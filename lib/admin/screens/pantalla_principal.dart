@@ -664,7 +664,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
-      // Ignorar error al cerrar sesión
+      
     }
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -1034,7 +1034,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     }
   }
 
-  /// Calcula los productos más y menos vendidos a partir de los pedidos.
+  
   List<MapEntry<String, int>> _calcularProductosPorVentas() {
     final Map<String, int> conteo = {};
     for (final pedido in _listaPedidos) {
@@ -1057,11 +1057,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     final int pedidosCompletados = _listaPedidos.where((p) => p['estado_id'] == 6 || p['estado_id'] == 4).length;
     final int totalProductos = _todosLosProductos.length;
 
-    // Top 5 más vendidos
+    
     final masVendidos = ventasPorProducto.take(5).toList();
-    // Top 5 menos vendidos (con al menos 1 venta)
+    
     final menosVendidos = ventasPorProducto.reversed.take(5).toList();
-    // Productos sin ventas
+    
     final nombresConVentas = ventasPorProducto.map((e) => e.key).toSet();
     final sinVentas = _todosLosProductos
         .where((p) => !nombresConVentas.contains(p['nombre']))
@@ -1074,7 +1074,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Encabezado ──────────────────────────────────────────────
+          
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -1120,7 +1120,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           const SizedBox(height: 20),
 
-          // ── Tarjetas de resumen ─────────────────────────────────────
+          
           LayoutBuilder(
             builder: (context, constraints) {
               int crossCount = 2;
@@ -1176,7 +1176,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           const SizedBox(height: 24),
 
-          // ── Sección de Listas de Productos Vendidos (Responsivo) ─────
+          
           LayoutBuilder(
             builder: (context, constraints) {
               final bool esAncho = constraints.maxWidth > 900;
@@ -1236,7 +1236,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             },
           ),
 
-          // ── Sin ventas ──────────────────────────────────────────────
+          
           if (sinVentas.isNotEmpty) ...[
             const SizedBox(height: 24),
             _seccionTitulo('⚠️ Sin ventas registradas', AppTheme.errorColor),
@@ -1640,7 +1640,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           try {
                             fecha = DateTime.parse(fechaMod);
                           } catch (e) {
-                            // Ignorar error de análisis de fecha
+                            
                           }
                         }
 

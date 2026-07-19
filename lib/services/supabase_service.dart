@@ -4,7 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/producto_model.dart';
 
-// ponytail: configurar con Web client ID de Google Cloud Console
+
 const String googleServerClientId = '40639867882-nt5t6ki2l9a52mt94cc5olllg8jmuvug.apps.googleusercontent.com';
 
 class SupabaseService {
@@ -78,8 +78,8 @@ class SupabaseService {
     await _cliente.auth.signOut();
   }
 
-  /// Verifica en la base de datos si el usuario actual tiene rol de administrador.
-  /// Devuelve [true] si la columna `rol_id` del registro en `usuario` es 2.
+  
+  
   Future<bool> esAdmin(String email) async {
     try {
       final data = await _cliente
@@ -117,7 +117,7 @@ class SupabaseService {
     final idToken = googleUser.authentication.idToken;
     if (idToken == null) {
       throw Exception(
-        'Token de Google nulo. Configura serverClientId en supabase_service.dart',
+        'Token de Google nulo',
       );
     }
 
