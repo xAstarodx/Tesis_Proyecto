@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/producto_model.dart';
 
 // ponytail: configurar con Web client ID de Google Cloud Console
-const String _googleServerClientId = 'TU_WEB_CLIENT_ID.apps.googleusercontent.com';
+const String googleServerClientId = '40639867882-nt5t6ki2l9a52mt94cc5olllg8jmuvug.apps.googleusercontent.com';
 
 class SupabaseService {
   final _cliente = Supabase.instance.client;
@@ -113,18 +113,8 @@ class SupabaseService {
   }
 
   Future<AuthResponse> iniciarSesionGoogle() async {
-    final googleSignIn = GoogleSignIn(
-      scopes: ['email', 'profile'],
-      serverClientId: _googleServerClientId,
-    );
-
-    final googleUser = await googleSignIn.signIn();
-    if (googleUser == null) {
-      throw Exception('Inicio de sesión cancelado');
-    }
-
-    final googleAuth = await googleUser.authentication;
-    final idToken = googleAuth.idToken;
+    final googleUser = await GoogleSignIn.instance.authenticate();
+    final idToken = googleUser.authentication.idToken;
     if (idToken == null) {
       throw Exception(
         'Token de Google nulo. Configura serverClientId en supabase_service.dart',
@@ -134,7 +124,6 @@ class SupabaseService {
     return await _cliente.auth.signInWithIdToken(
       provider: OAuthProvider.google,
       idToken: idToken,
-      accessToken: googleAuth.accessToken,
     );
   }
 

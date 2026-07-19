@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'widgets/mi_aplicacion.dart';
 import 'models/cart_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/supabase_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +15,14 @@ void main() async {
   );
 
   await CartModel.cargarCarrito();
+
+  try {
+    await GoogleSignIn.instance.initialize(
+      serverClientId: googleServerClientId,
+    );
+  } catch (e) {
+    debugPrint('Google Sign-In init skipped ($e)');
+  }
 
   runApp(const MyApp());
 }
