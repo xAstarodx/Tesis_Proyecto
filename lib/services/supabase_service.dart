@@ -1,11 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/producto_model.dart';
-
-
-const String googleServerClientId = '40639867882-nt5t6ki2l9a52mt94cc5olllg8jmuvug.apps.googleusercontent.com';
 
 class SupabaseService {
   final _cliente = Supabase.instance.client;
@@ -112,18 +108,10 @@ class SupabaseService {
     );
   }
 
-  Future<AuthResponse> iniciarSesionGoogle() async {
-    final googleUser = await GoogleSignIn.instance.authenticate();
-    final idToken = googleUser.authentication.idToken;
-    if (idToken == null) {
-      throw Exception(
-        'Token de Google nulo',
-      );
-    }
-
-    return await _cliente.auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
+  Future<void> iniciarSesionGoogle() async {
+    await _cliente.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'https://qimcbnumzypyxhnvimjt.supabase.co/auth/v1/callback',
     );
   }
 
