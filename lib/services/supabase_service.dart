@@ -111,7 +111,7 @@ class SupabaseService {
   Future<void> iniciarSesionGoogle() async {
     await _cliente.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'https://qimcbnumzypyxhnvimjt.supabase.co/auth/v1/callback',
+      redirectTo: 'io.supabase.flutter://login-callback/',
     );
   }
 
