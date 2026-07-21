@@ -7,7 +7,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:file_picker/file_picker.dart';
 import '../services/producto_service.dart';
 import '../../widgets/login.dart';
 import '../../theme/app_theme.dart';
@@ -2625,56 +2624,24 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _mostrarDialogoImportarExcel,
-                        icon: const Icon(Icons.file_upload_outlined),
-                        label: const Text('Importar Excel'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 44),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 );
               }
-              return Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _mostrarDialogoAgregarProducto,
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('Añadir Producto'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentColor,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _mostrarDialogoAgregarProducto,
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Añadir Producto'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentColor,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _mostrarDialogoImportarExcel,
-                      icon: const Icon(Icons.file_upload_outlined),
-                      label: const Text('Importar Excel'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               );
             },
           ),
@@ -3150,136 +3117,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ),
       ),
     );
-  }
-
-  void _mostrarDialogoImportarExcel() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Importar Productos'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Descarga la plantilla, llénala y súbela.',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _descargarPlantilla(),
-                icon: const Icon(Icons.download),
-                label: const Text('Descargar Formato'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _subirYProcesarExcel(context),
-                icon: const Icon(Icons.file_upload),
-                label: const Text('Subir archivo Excel'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _descargarPlantilla() async {
-    try {
-      final bytes = await productoService.generarPlantillaExcel();
-      final result = await FilePicker.platform.saveFile(
-        fileName: 'plantilla_productos.xlsx',
-        bytes: bytes,
-      );
-      if (result != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Plantilla guardada')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al descargar: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _subirYProcesarExcel(BuildContext dialogContext) async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        withData: true,
-      );
-
-      if (result == null || result.files.single.bytes == null) return;
-
-      Navigator.of(dialogContext).pop();
-
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Procesando archivo...')),
-      );
-
-      final bytes = result.files.single.bytes!;
-      final cats = List<Map<String, dynamic>>.from(_categorias);
-      final res = await productoService.importarProductosDesdeExcel(
-        bytes,
-        cats,
-      );
-
-      await _cargarDatos();
-
-      if (mounted) {
-        messenger.hideCurrentSnackBar();
-        showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Importación completada'),
-            content: Text(
-              'Creados: ${res['creados']}\n'
-              'Actualizados: ${res['actualizados']}\n'
-              'Errores: ${res['errores']}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
   }
 
   void _mostrarDialogoEditarProducto(Map<String, dynamic> producto) {
