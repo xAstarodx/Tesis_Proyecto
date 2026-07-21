@@ -106,7 +106,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _cargarDatos() async {
     setState(() => _estaCargando = true);
     try {
-
       final resultados = await Future.wait([
         productoService.obtenerTodosLosProductos(),
         productoService.obtenerTasaCambioInfo(),
@@ -157,7 +156,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      initialDateRange: (_fechaInicioReporte != null && _fechaFinReporte != null)
+      initialDateRange:
+          (_fechaInicioReporte != null && _fechaFinReporte != null)
           ? DateTimeRange(start: _fechaInicioReporte!, end: _fechaFinReporte!)
           : null,
       helpText: 'Seleccionar rango de fechas para el reporte',
@@ -670,9 +670,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _cerrarSesion() async {
     try {
       await Supabase.instance.client.auth.signOut();
-    } catch (e) {
-      
-    }
+    } catch (e) {}
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
@@ -687,9 +685,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.primaryGradient,
-            ),
+            decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
             accountName: const Text(
               'Administrador',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -817,11 +813,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 5,
-            offset: Offset(2, 0),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(2, 0)),
         ],
       ),
       child: Column(
@@ -1041,13 +1033,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     }
   }
 
-  
   List<MapEntry<String, int>> _calcularProductosPorVentas() {
     final Map<String, int> conteo = {};
     for (final pedido in _listaPedidos) {
       final detalles = pedido['detalle_pedido'] as List<dynamic>? ?? [];
       for (final detalle in detalles) {
-        final nombre = detalle['productos']?['nombre'] as String? ?? 'Desconocido';
+        final nombre =
+            detalle['productos']?['nombre'] as String? ?? 'Desconocido';
         final cantidad = (detalle['cantidad'] as num?)?.toInt() ?? 0;
         conteo[nombre] = (conteo[nombre] ?? 0) + cantidad;
       }
@@ -1060,15 +1052,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Widget _construirDashboard() {
     final ventasPorProducto = _calcularProductosPorVentas();
     final int totalPedidos = _listaPedidos.length;
-    final int pedidosPendientes = _listaPedidos.where((p) => p['estado_id'] == 1).length;
-    final int pedidosCompletados = _listaPedidos.where((p) => p['estado_id'] == 6 || p['estado_id'] == 4).length;
+    final int pedidosPendientes = _listaPedidos
+        .where((p) => p['estado_id'] == 1)
+        .length;
+    final int pedidosCompletados = _listaPedidos
+        .where((p) => p['estado_id'] == 6 || p['estado_id'] == 4)
+        .length;
     final int totalProductos = _todosLosProductos.length;
 
-    
     final masVendidos = ventasPorProducto.take(5).toList();
-    
+
     final menosVendidos = ventasPorProducto.reversed.take(5).toList();
-    
+
     final nombresConVentas = ventasPorProducto.map((e) => e.key).toSet();
     final sinVentas = _todosLosProductos
         .where((p) => !nombresConVentas.contains(p['nombre']))
@@ -1081,7 +1076,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -1101,7 +1095,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.dashboard_rounded, color: Colors.white, size: 28),
+                    Icon(
+                      Icons.dashboard_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                     SizedBox(width: 12),
                     Text(
                       'Dashboard',
@@ -1127,7 +1125,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           const SizedBox(height: 20),
 
-          
           LayoutBuilder(
             builder: (context, constraints) {
               int crossCount = 2;
@@ -1183,7 +1180,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
           const SizedBox(height: 24),
 
-          
           LayoutBuilder(
             builder: (context, constraints) {
               final bool esAncho = constraints.maxWidth > 900;
@@ -1214,7 +1210,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             AppTheme.warningColor,
                           ),
                           const SizedBox(height: 12),
-                          _listaProductosMenosVendidos(menosVendidos, maxVentas),
+                          _listaProductosMenosVendidos(
+                            menosVendidos,
+                            maxVentas,
+                          ),
                         ],
                       ),
                     ),
@@ -1243,7 +1242,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             },
           ),
 
-          
           if (sinVentas.isNotEmpty) ...[
             const SizedBox(height: 24),
             _seccionTitulo('⚠️ Sin ventas registradas', AppTheme.errorColor),
@@ -1253,7 +1251,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               runSpacing: 8,
               children: sinVentas.map((p) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
@@ -1290,7 +1291,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  Widget _listaProductosMasVendidos(List<MapEntry<String, int>> masVendidos, int maxVentas) {
+  Widget _listaProductosMasVendidos(
+    List<MapEntry<String, int>> masVendidos,
+    int maxVentas,
+  ) {
     return masVendidos.isEmpty
         ? _mensajeVacio('No hay datos de ventas aún')
         : Column(
@@ -1311,7 +1315,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           );
   }
 
-  Widget _listaProductosMenosVendidos(List<MapEntry<String, int>> menosVendidos, int maxVentas) {
+  Widget _listaProductosMenosVendidos(
+    List<MapEntry<String, int>> menosVendidos,
+    int maxVentas,
+  ) {
     return menosVendidos.isEmpty
         ? _mensajeVacio('No hay datos de ventas aún')
         : Column(
@@ -1488,7 +1495,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -1646,9 +1656,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         if (fechaMod != null) {
                           try {
                             fecha = DateTime.parse(fechaMod);
-                          } catch (e) {
-                            
-                          }
+                          } catch (e) {}
                         }
 
                         final esPrimero = index == 0;
@@ -1729,10 +1737,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(
-                color: AppTheme.dividerColor,
-                width: 1,
-              ),
+              side: const BorderSide(color: AppTheme.dividerColor, width: 1),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -1745,7 +1750,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.monetization_on_outlined, color: AppTheme.primaryColor),
+                          Icon(
+                            Icons.monetization_on_outlined,
+                            color: AppTheme.primaryColor,
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1762,7 +1770,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       const SizedBox(height: 8),
                       const Text(
                         'Resumen de productos vendidos en pedidos pagados o entregados.',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Container(
@@ -1775,10 +1786,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         child: Column(
                           children: [
                             Text(
-                              _fechaInicioReporte != null && _fechaFinReporte != null
+                              _fechaInicioReporte != null &&
+                                      _fechaFinReporte != null
                                   ? (_fechaInicioReporte == _fechaFinReporte
-                                      ? 'Fecha: ${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year}'
-                                      : 'Rango: ${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year} al ${_fechaFinReporte!.day.toString().padLeft(2, '0')}/${_fechaFinReporte!.month.toString().padLeft(2, '0')}/${_fechaFinReporte!.year}')
+                                        ? 'Fecha: ${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year}'
+                                        : 'Rango: ${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year} al ${_fechaFinReporte!.day.toString().padLeft(2, '0')}/${_fechaFinReporte!.month.toString().padLeft(2, '0')}/${_fechaFinReporte!.year}')
                                   : 'Todos los registros (sin filtro de fecha)',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -1794,22 +1806,39 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: _estaCargando ? null : _seleccionarFechaUnica,
+                                    onPressed: _estaCargando
+                                        ? null
+                                        : _seleccionarFechaUnica,
                                     icon: const Icon(Icons.today, size: 16),
-                                    label: const Text('Elegir Día', style: TextStyle(fontSize: 12)),
+                                    label: const Text(
+                                      'Elegir Día',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: _estaCargando ? null : _seleccionarRangoFechas,
-                                    icon: const Icon(Icons.date_range, size: 16),
-                                    label: const Text('Elegir Rango', style: TextStyle(fontSize: 12)),
+                                    onPressed: _estaCargando
+                                        ? null
+                                        : _seleccionarRangoFechas,
+                                    icon: const Icon(
+                                      Icons.date_range,
+                                      size: 16,
+                                    ),
+                                    label: const Text(
+                                      'Elegir Rango',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -1859,10 +1888,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(
-                color: AppTheme.dividerColor,
-                width: 1,
-              ),
+              side: const BorderSide(color: AppTheme.dividerColor, width: 1),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -1875,7 +1901,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.pending_actions, color: AppTheme.warningColor),
+                          Icon(
+                            Icons.pending_actions,
+                            color: AppTheme.warningColor,
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1892,7 +1921,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       const SizedBox(height: 8),
                       const Text(
                         'Genera un documento con todos los pedidos en preparación, listos o nuevos para facilitar el despacho.',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                       if (isWide) ...[
                         const SizedBox(height: 16),
@@ -1912,7 +1944,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _estaCargando ? null : _generarPDFReportePedidosPendientes,
+                      onPressed: _estaCargando
+                          ? null
+                          : _generarPDFReportePedidosPendientes,
                       icon: const Icon(Icons.download, size: 18),
                       label: const Text('DESCARGAR REPORTE PENDIENTES'),
                       style: ElevatedButton.styleFrom(
@@ -1950,13 +1984,19 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     const SizedBox(height: 16),
                     const Text(
                       'Generar Reportes PDF',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Selecciona el tipo de reporte que deseas generar.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     if (isWide)
@@ -2074,8 +2114,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             final tasaDolar = detallesPago.first['tasa_dolar'];
                             if (tasaDolar != null &&
                                 tasaDolar['valor'] != null) {
-                              tasaAplicada = (tasaDolar['valor'] as num?)
-                                  ?.toDouble() ?? _tasaCambioValor;
+                              tasaAplicada =
+                                  (tasaDolar['valor'] as num?)?.toDouble() ??
+                                  _tasaCambioValor;
                             }
                           }
                         }
@@ -2243,7 +2284,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     if (indice == 2) {
       final query = _textoBusquedaPedidos.toLowerCase();
       final pedidosPendientes = _listaPedidos
-
           .where(
             (p) =>
                 p['estado_id'] != 4 &&
@@ -2276,7 +2316,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     color: AppTheme.textPrimary,
                   ),
                 ),
-                
               ],
             ),
           ),
@@ -2374,7 +2413,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-
                                   Row(
                                     children: [
                                       Container(
@@ -2682,12 +2720,15 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         final int columns = constraints.maxWidth > 1100 ? 3 : 2;
                         return GridView.builder(
                           padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: constraints.maxWidth > 1100 ? 2.5 : 2.2,
-                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: columns,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: constraints.maxWidth > 1100
+                                    ? 2.5
+                                    : 2.2,
+                              ),
                           itemCount: _todosLosProductos.length,
                           itemBuilder: (context, i) {
                             final producto = _todosLosProductos[i];
@@ -2718,7 +2759,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       (cat) => cat['categoria_id'] == producto['categoria_id'],
       orElse: () => {'nombre_categoria': 'Sin categoría'},
     );
-    final categoriaEtiqueta = (categoria['nombre_categoria'] as String?) ?? 'Sin categoría';
+    final categoriaEtiqueta =
+        (categoria['nombre_categoria'] as String?) ?? 'Sin categoría';
     final precioUsd = (producto['precio'] as num?)?.toDouble() ?? 0.0;
     final stock = (producto['stock'] as num?)?.toInt() ?? 0;
     final bool esAncho = MediaQuery.of(context).size.width > 700;
@@ -2747,7 +2789,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         child: Image.network(
                           producto['imagen_url'],
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Icon(Icons.restaurant_menu, size: esAncho ? 40 : 24),
+                          errorBuilder: (_, _, _) => Icon(
+                            Icons.restaurant_menu,
+                            size: esAncho ? 40 : 24,
+                          ),
                         ),
                       )
                     : Icon(Icons.restaurant_menu, size: esAncho ? 40 : 24),
@@ -2769,7 +2814,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -2789,14 +2837,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         Icon(
                           stock > 0 ? Icons.inventory : Icons.error_outline,
                           size: 14,
-                          color: stock > 0 ? AppTheme.textSecondary : AppTheme.errorColor,
+                          color: stock > 0
+                              ? AppTheme.textSecondary
+                              : AppTheme.errorColor,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'Stock: $stock',
                           style: TextStyle(
                             fontSize: 12,
-                            color: stock > 0 ? AppTheme.textSecondary : AppTheme.errorColor,
+                            color: stock > 0
+                                ? AppTheme.textSecondary
+                                : AppTheme.errorColor,
                           ),
                         ),
                       ],
@@ -2810,7 +2862,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       gradient: AppTheme.accentGradient,
                       borderRadius: BorderRadius.circular(6),
@@ -2833,14 +2888,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         padding: const EdgeInsets.all(4),
                         icon: const Icon(Icons.edit_outlined, size: 20),
                         color: AppTheme.primaryColor,
-                        onPressed: () => _mostrarDialogoEditarProducto(producto),
+                        onPressed: () =>
+                            _mostrarDialogoEditarProducto(producto),
                       ),
                       IconButton(
                         constraints: const BoxConstraints(),
                         padding: const EdgeInsets.all(4),
                         icon: const Icon(Icons.delete_outline, size: 20),
                         color: AppTheme.errorColor,
-                        onPressed: () => _confirmarEliminarProducto(producto['producto_id']),
+                        onPressed: () =>
+                            _confirmarEliminarProducto(producto['producto_id']),
                       ),
                     ],
                   ),
@@ -2966,11 +3023,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     controller: controladorCantidad,
                     decoration: const InputDecoration(labelText: 'Cantidad'),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Número inválido';
+                      if (v == null || v.trim().isEmpty)
+                        return 'Número inválido';
                       final n = int.tryParse(v);
                       if (n == null) return 'Número inválido';
                       if (n < 0) return 'La cantidad no puede ser negativa';
@@ -2991,7 +3047,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       ),
                     ],
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Precio inválido';
+                      if (v == null || v.trim().isEmpty)
+                        return 'Precio inválido';
                       final p = double.tryParse(v.replaceAll(',', '.'));
                       if (p == null) return 'Precio inválido';
                       if (p <= 0) return 'El precio debe ser mayor a cero';
@@ -3041,9 +3098,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
 
-                // ponytail: linear scan for duplicate name, OK for <10k products
                 final duplicado = _todosLosProductos.any(
-                  (p) => (p['nombre'] as String).toLowerCase() == nombre.toLowerCase(),
+                  (p) =>
+                      (p['nombre'] as String).toLowerCase() ==
+                      nombre.toLowerCase(),
                 );
                 if (duplicado) {
                   messenger.showSnackBar(
@@ -3156,15 +3214,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/plantilla_productos.xlsx');
       await file.writeAsBytes(bytes);
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Plantilla de productos',
-      );
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Plantilla de productos');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al descargar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al descargar: $e')));
       }
     }
   }
@@ -3188,7 +3245,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
       final bytes = result.files.single.bytes!;
       final cats = List<Map<String, dynamic>>.from(_categorias);
-      final res = await productoService.importarProductosDesdeExcel(bytes, cats);
+      final res = await productoService.importarProductosDesdeExcel(
+        bytes,
+        cats,
+      );
 
       await _cargarDatos();
 
@@ -3214,9 +3274,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -3321,9 +3381,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     controller: controladorCantidad,
                     decoration: const InputDecoration(labelText: 'Cantidad'),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Inválido';
                       final n = int.tryParse(v);
@@ -3433,7 +3491,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _generarPDFReporte() async {
     setState(() => _estaCargando = true);
     try {
-
       var pedidosPagados = _listaPedidos
           .where((p) => p['estado_id'] == 4 || p['estado_id'] == 6)
           .toList();
@@ -3458,20 +3515,30 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         );
         pedidosPagados = pedidosPagados.where((p) {
           if (p['fecha_creacion'] == null) return false;
-          final fechaPed = (p['fecha_creacion'] is String) ? DateTime.parse(p['fecha_creacion'] as String).toLocal() : DateTime.now();
-          return fechaPed.isAfter(inicio.subtract(const Duration(milliseconds: 1))) &&
+          final fechaPed = (p['fecha_creacion'] is String)
+              ? DateTime.parse(p['fecha_creacion'] as String).toLocal()
+              : DateTime.now();
+          return fechaPed.isAfter(
+                inicio.subtract(const Duration(milliseconds: 1)),
+              ) &&
               fechaPed.isBefore(fin.add(const Duration(milliseconds: 1)));
         }).toList();
       }
 
       if (pedidosPagados.isEmpty) {
         if (_fechaInicioReporte != null && _fechaFinReporte != null) {
-          final fIni = '${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year}';
-          final fFin = '${_fechaFinReporte!.day.toString().padLeft(2, '0')}/${_fechaFinReporte!.month.toString().padLeft(2, '0')}/${_fechaFinReporte!.year}';
+          final fIni =
+              '${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year}';
+          final fFin =
+              '${_fechaFinReporte!.day.toString().padLeft(2, '0')}/${_fechaFinReporte!.month.toString().padLeft(2, '0')}/${_fechaFinReporte!.year}';
           if (_fechaInicioReporte == _fechaFinReporte) {
-            throw Exception('No hay pedidos pagados en la fecha seleccionada ($fIni).');
+            throw Exception(
+              'No hay pedidos pagados en la fecha seleccionada ($fIni).',
+            );
           } else {
-            throw Exception('No hay pedidos pagados en el rango de fechas seleccionado ($fIni al $fFin).');
+            throw Exception(
+              'No hay pedidos pagados en el rango de fechas seleccionado ($fIni al $fFin).',
+            );
           }
         } else {
           throw Exception('No hay pedidos pagados para generar el reporte.');
@@ -3483,7 +3550,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       double granTotalBs = 0;
 
       for (var p in pedidosPagados) {
-
         final registrosPagos = p['registro_pagos'] as List<dynamic>?;
         double tasaAplicada = _tasaCambioValor;
         if (registrosPagos != null && registrosPagos.isNotEmpty) {
@@ -3492,8 +3558,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           if (detallesPago != null && detallesPago.isNotEmpty) {
             final tasaDolar = detallesPago.first['tasa_dolar'];
             if (tasaDolar != null && tasaDolar['valor'] != null) {
-              tasaAplicada = (tasaDolar['valor'] as num?)
-                  ?.toDouble() ?? _tasaCambioValor;
+              tasaAplicada =
+                  (tasaDolar['valor'] as num?)?.toDouble() ?? _tasaCambioValor;
             }
           }
         }
@@ -3530,8 +3596,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
       final String tituloReporte;
       if (_fechaInicioReporte != null && _fechaFinReporte != null) {
-        final fIni = '${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year}';
-        final fFin = '${_fechaFinReporte!.day.toString().padLeft(2, '0')}/${_fechaFinReporte!.month.toString().padLeft(2, '0')}/${_fechaFinReporte!.year}';
+        final fIni =
+            '${_fechaInicioReporte!.day.toString().padLeft(2, '0')}/${_fechaInicioReporte!.month.toString().padLeft(2, '0')}/${_fechaInicioReporte!.year}';
+        final fFin =
+            '${_fechaFinReporte!.day.toString().padLeft(2, '0')}/${_fechaFinReporte!.month.toString().padLeft(2, '0')}/${_fechaFinReporte!.year}';
         if (_fechaInicioReporte == _fechaFinReporte) {
           tituloReporte = 'Reporte de Ventas ($fIni)';
         } else {
@@ -3547,77 +3615,79 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           margin: const pw.EdgeInsets.all(32),
           build: (pw.Context context) {
             return [
-                pw.Header(
-                  level: 0,
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text('$tituloReporte - Cafetín ISABORES'),
-                      pw.Text(fecha, style: const pw.TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  'Resumen de Productos Vendidos (Pagados):',
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                ),
-                pw.SizedBox(height: 10),
-                pw.TableHelper.fromTextArray(
-                  headers: [
-                    'Producto',
-                    'Cant.',
-                    'P. Unit (USD)',
-                    'Total (USD)',
-                    'Total (Bs)',
+              pw.Header(
+                level: 0,
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('$tituloReporte - Cafetín ISABORES'),
+                    pw.Text(fecha, style: const pw.TextStyle(fontSize: 10)),
                   ],
-                  headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                  data: ventas
-                      .map(
-                        (v) => [
-                          v['nombre'],
-                          v['cantidad'].toString(),
-                          '\$${(v['precio_unitario'] as num).toStringAsFixed(2)}',
-                          '\$${(v['total'] as num).toStringAsFixed(2)}',
-                          'Bs ${(v['total_bs'] as num).toStringAsFixed(2)}',
-                        ],
-                      )
-                      .toList(),
                 ),
-                pw.SizedBox(height: 30),
-                pw.Divider(),
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      pw.Text(
-                        'TOTAL GENERAL (USD): \$${granTotal.toStringAsFixed(2)}',
-                        style: pw.TextStyle(
-                          fontSize: 16,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text(
+                'Resumen de Productos Vendidos (Pagados):',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 10),
+              pw.TableHelper.fromTextArray(
+                headers: [
+                  'Producto',
+                  'Cant.',
+                  'P. Unit (USD)',
+                  'Total (USD)',
+                  'Total (Bs)',
+                ],
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                data: ventas
+                    .map(
+                      (v) => [
+                        v['nombre'],
+                        v['cantidad'].toString(),
+                        '\$${(v['precio_unitario'] as num).toStringAsFixed(2)}',
+                        '\$${(v['total'] as num).toStringAsFixed(2)}',
+                        'Bs ${(v['total_bs'] as num).toStringAsFixed(2)}',
+                      ],
+                    )
+                    .toList(),
+              ),
+              pw.SizedBox(height: 30),
+              pw.Divider(),
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'TOTAL GENERAL (USD): \$${granTotal.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
                       ),
-                      pw.Text(
-                        'TOTAL GENERAL (BS): Bs ${granTotalBs.toStringAsFixed(2)}',
-                        style: pw.TextStyle(
-                          fontSize: 16,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.blue,
-                        ),
+                    ),
+                    pw.Text(
+                      'TOTAL GENERAL (BS): Bs ${granTotalBs.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ];
+              ),
+            ];
           },
         ),
       );
 
       final String nombrePdf;
       if (_fechaInicioReporte != null && _fechaFinReporte != null) {
-        final fIni = '${_fechaInicioReporte!.day.toString().padLeft(2, '0')}-${_fechaInicioReporte!.month.toString().padLeft(2, '0')}-${_fechaInicioReporte!.year}';
-        final fFin = '${_fechaFinReporte!.day.toString().padLeft(2, '0')}-${_fechaFinReporte!.month.toString().padLeft(2, '0')}-${_fechaFinReporte!.year}';
+        final fIni =
+            '${_fechaInicioReporte!.day.toString().padLeft(2, '0')}-${_fechaInicioReporte!.month.toString().padLeft(2, '0')}-${_fechaInicioReporte!.year}';
+        final fFin =
+            '${_fechaFinReporte!.day.toString().padLeft(2, '0')}-${_fechaFinReporte!.month.toString().padLeft(2, '0')}-${_fechaFinReporte!.year}';
         if (_fechaInicioReporte == _fechaFinReporte) {
           nombrePdf = 'Reporte_Ventas_ISABORES_$fIni.pdf';
         } else {
@@ -3665,7 +3735,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       for (var p in pedidosPendientes) {
         final detalles = p['detalle_pedido'] as List<dynamic>? ?? [];
         for (var d in detalles) {
-          granTotalUsd += ((d['cantidad'] as num?) ?? 0) * ((d['precio_unitario'] as num?) ?? 0);
+          granTotalUsd +=
+              ((d['cantidad'] as num?) ?? 0) *
+              ((d['precio_unitario'] as num?) ?? 0);
         }
       }
       final granTotalBs = granTotalUsd * _tasaCambioValor;
@@ -3677,7 +3749,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         final correo = p['usuario']?['correo'] ?? 'Sin correo';
 
         final fechaPed = (p['fecha_creacion'] is String)
-            ? DateTime.parse(p['fecha_creacion'] as String).toLocal().toString().split('.')[0]
+            ? DateTime.parse(
+                p['fecha_creacion'] as String,
+              ).toLocal().toString().split('.')[0]
             : 'N/A';
         final horaRecogida = p['hora_recogida'] ?? 'Sin hora';
         final estado = p['estado']?['etiqueta'] ?? 'Pendiente';
@@ -3685,16 +3759,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
         final detalles = p['detalle_pedido'] as List<dynamic>? ?? [];
         double totalPedido = 0.0;
-        final detalleTexto = detalles.map((d) {
-          final prod = d['productos'];
-          final cant = d['cantidad'];
-          final precio = d['precio_unitario'] as num;
-          totalPedido += cant * precio;
-          final desc = d['Descripcion'] != null && d['Descripcion'].toString().isNotEmpty
-              ? ' (${d['Descripcion']})'
-              : '';
-          return '${prod?['nombre'] ?? 'Producto'} x$cant$desc';
-        }).join('\n');
+        final detalleTexto = detalles
+            .map((d) {
+              final prod = d['productos'];
+              final cant = d['cantidad'];
+              final precio = d['precio_unitario'] as num;
+              totalPedido += cant * precio;
+              final desc =
+                  d['Descripcion'] != null &&
+                      d['Descripcion'].toString().isNotEmpty
+                  ? ' (${d['Descripcion']})'
+                  : '';
+              return '${prod?['nombre'] ?? 'Producto'} x$cant$desc';
+            })
+            .join('\n');
 
         final totalBsPedido = totalPedido * _tasaCambioValor;
 
@@ -3719,8 +3797,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Reporte de Pedidos Pendientes - Cafetín ISABORES',
-                      style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)
+                    pw.Text(
+                      'Reporte de Pedidos Pendientes - Cafetín ISABORES',
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
                     pw.Text(fecha, style: const pw.TextStyle(fontSize: 10)),
                   ],
@@ -3729,7 +3811,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               pw.SizedBox(height: 20),
               pw.Text(
                 'Pedidos pendientes de preparación o entrega (${pedidosPendientes.length}):',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
               pw.SizedBox(height: 10),
               pw.TableHelper.fromTextArray(
@@ -3795,7 +3880,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ),
       );
 
-      final String nombrePdf = 'Reporte_Pedidos_Pendientes_ISABORES_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final String nombrePdf =
+          'Reporte_Pedidos_Pendientes_ISABORES_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) => pdf.save(),

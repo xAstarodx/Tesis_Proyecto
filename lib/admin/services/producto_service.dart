@@ -4,10 +4,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:excel/excel.dart';
 
 String _detectarExtension(Uint8List bytes) {
-  if (bytes.length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return 'png';
+  if (bytes.length >= 4 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47)
+    return 'png';
   if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) return 'jpg';
-  if (bytes.length >= 4 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46) return 'webp';
-  if (bytes.length >= 3 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) return 'gif';
+  if (bytes.length >= 4 &&
+      bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46)
+    return 'webp';
+  if (bytes.length >= 3 &&
+      bytes[0] == 0x47 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46)
+    return 'gif';
   return 'png';
 }
 
@@ -25,9 +39,7 @@ class ProductoService {
             bytes,
             fileOptions: FileOptions(contentType: 'image/$ext'),
           );
-      return supabase.storage
-          .from('imagenes_productos')
-          .getPublicUrl(fileName);
+      return supabase.storage.from('imagenes_productos').getPublicUrl(fileName);
     } catch (e) {
       debugPrint('Error subiendo imagen: $e');
       return null;
@@ -185,14 +197,14 @@ class ProductoService {
     String? referencia,
     String? comprobanteUrl,
   }) async {
-
     final registroPagoRes = await supabase
         .from('registro_pagos')
         .insert({'id_pedido': pedidoId, 'monto_total_pedido': montoTotalUsd})
         .select('id_pago')
         .maybeSingle();
 
-    if (registroPagoRes == null) throw Exception('Error al crear registro de pago');
+    if (registroPagoRes == null)
+      throw Exception('Error al crear registro de pago');
     final idPago = registroPagoRes['id_pago'];
 
     await supabase.from('detalle_pago').insert({
@@ -252,10 +264,7 @@ class ProductoService {
               )
             )
           ''')
-          .neq(
-            'estado_id',
-            5,
-          )
+          .neq('estado_id', 5)
           .order('fecha_creacion', ascending: false);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
@@ -271,7 +280,6 @@ class ProductoService {
           .eq('pedido_id', pedidoId);
 
       if (nuevoEstadoId == 4 || nuevoEstadoId == 6) {
-
         final existePago = await supabase
             .from('registro_pagos')
             .select('id_pago')
@@ -300,7 +308,8 @@ class ProductoService {
           totalUsd += (d['cantidad'] as num) * (d['precio_unitario'] as num);
         }
 
-        final formaPagoId = (pedidoData['forma_pago']?['forma_pago_id'] as num?)?.toInt() ?? 1;
+        final formaPagoId =
+            (pedidoData['forma_pago']?['forma_pago_id'] as num?)?.toInt() ?? 1;
 
         final datosPagoRaw = pedidoData['datos_pago_orden'];
         final Map<String, dynamic>? datosUsuario =
@@ -327,7 +336,6 @@ class ProductoService {
 
   Future<void> eliminarPedido(int pedidoId) async {
     try {
-
       await supabase
           .from('pedido')
           .update({'estado_id': 5})
@@ -368,13 +376,22 @@ class ProductoService {
     return Uint8List.fromList(encoded ?? []);
   }
 
-  // ponytail: linear scan on name for upsert; add DB unique constraint if scale requires it
   Future<Map<String, int>> importarProductosDesdeExcel(
     Uint8List bytes,
     List<Map<String, dynamic>> categorias,
   ) async {
-    final excel = Excel.decodeBytes(bytes);
-    if (excel.tables.values.isEmpty) return {'creados': 0, 'actualizados': 0, 'errores': 0};
+    late Excel excel;
+    try {
+      excel = Excel.decodeBytes(bytes);
+    } catch (e) {
+      throw Exception(
+        'El archivo Excel tiene formatos de celda incompatibles. '
+        'Abre el archivo en Excel/LibreOffice, selecciona todas las celdas, '
+        'pon el formato en "Texto", guarda y vuelve a intentar.\n\nError: $e',
+      );
+    }
+    if (excel.tables.values.isEmpty)
+      return {'creados': 0, 'actualizados': 0, 'errores': 0};
     final sheet = excel.tables.values.first;
     final rows = sheet.rows;
 
@@ -471,6 +488,10 @@ class ProductoService {
       }
     }
 
-    return {'creados': creados, 'actualizados': actualizados, 'errores': errores};
+    return {
+      'creados': creados,
+      'actualizados': actualizados,
+      'errores': errores,
+    };
   }
 }
