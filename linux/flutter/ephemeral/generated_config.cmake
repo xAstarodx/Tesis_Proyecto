@@ -1,6 +1,6 @@
 # Generated code do not commit.
 file(TO_CMAKE_PATH "/sdks/flutter" FLUTTER_ROOT)
-file(TO_CMAKE_PATH "/workspaces/Tesis_Proyecto/app" PROJECT_DIR)
+file(TO_CMAKE_PATH "/workspaces/Tesis_Proyecto" PROJECT_DIR)
 
 set(FLUTTER_VERSION "1.0.0+1" PARENT_SCOPE)
 set(FLUTTER_VERSION_MAJOR 1 PARENT_SCOPE)
@@ -11,11 +11,11 @@ set(FLUTTER_VERSION_BUILD 1 PARENT_SCOPE)
 # Environment variables to pass to tool_backend.sh
 list(APPEND FLUTTER_TOOL_ENVIRONMENT
   "FLUTTER_ROOT=/sdks/flutter"
-  "PROJECT_DIR=/workspaces/Tesis_Proyecto/app"
-  "DART_DEFINES=RkxVVFRFUl9WRVJTSU9OPTMuNDEuNg==,RkxVVFRFUl9DSEFOTkVMPVt1c2VyLWJyYW5jaF0=,RkxVVFRFUl9HSVRfVVJMPXVua25vd24gc291cmNl,RkxVVFRFUl9GUkFNRVdPUktfUkVWSVNJT049ZGI1MGUyMDE2OA==,RkxVVFRFUl9FTkdJTkVfUkVWSVNJT049NDI1Y2ZiNTRkMA==,RkxVVFRFUl9EQVJUX1ZFUlNJT049My4xMS40"
+  "PROJECT_DIR=/workspaces/Tesis_Proyecto"
+  "DART_DEFINES=RkxVVFRFUl9WRVJTSU9OPTMuNDQuMA==,RkxVVFRFUl9DSEFOTkVMPVt1c2VyLWJyYW5jaF0=,RkxVVFRFUl9HSVRfVVJMPXVua25vd24gc291cmNl,RkxVVFRFUl9GUkFNRVdPUktfUkVWSVNJT049NTU5ZmZhM2Y3NQ==,RkxVVFRFUl9FTkdJTkVfUkVWSVNJT049NGM1MjVkYWM1ZQ==,RkxVVFRFUl9EQVJUX1ZFUlNJT049My4xMi4w"
   "DART_OBFUSCATION=false"
   "TRACK_WIDGET_CREATION=true"
   "TREE_SHAKE_ICONS=false"
-  "PACKAGE_CONFIG=/workspaces/Tesis_Proyecto/app/.dart_tool/package_config.json"
-  "FLUTTER_TARGET=/workspaces/Tesis_Proyecto/app/lib/main.dart"
+  "PACKAGE_CONFIG=/workspaces/Tesis_Proyecto/.dart_tool/package_config.json"
+  "FLUTTER_TARGET=/workspaces/Tesis_Proyecto/lib/main.dart"
 )

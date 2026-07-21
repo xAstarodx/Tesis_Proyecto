@@ -40,7 +40,11 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
   }
 
   void _reproducirSonidoNotificacion() {
-    _audioPlayer.play(AssetSource('sounds/notificacion.mp3'));
+    try {
+      _audioPlayer.play(AssetSource('sounds/notificacion.mp3'));
+    } catch (e) {
+      debugPrint('Error reproduciendo notificación: $e');
+    }
   }
 
   Future<void> _suscribirACambios() async {
@@ -154,7 +158,7 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                   double total = 0;
                   for (var d in detalles) {
                     total +=
-                        (d['cantidad'] as num) * (d['precio_unitario'] as num);
+                        ((d['cantidad'] as num?) ?? 0) * ((d['precio_unitario'] as num?) ?? 0);
                   }
 
                   Color getEstadoColor() {
@@ -274,8 +278,8 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                               ...detalles.map<Widget>((d) {
                                 final prodNombre =
                                     d['productos']?['nombre'] ?? 'Producto';
-                                final cant = d['cantidad'];
-                                final precio = d['precio_unitario'];
+                                final cant = (d['cantidad'] as num?) ?? 0;
+                                final precio = (d['precio_unitario'] as num?) ?? 0;
                                 final subtotal = cant * precio;
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
@@ -305,7 +309,7 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                                               ),
                                             ),
                                             Text(
-                                              '$cant x \$${(precio as num).toStringAsFixed(2)}',
+                                              '$cant x \$${(precio).toStringAsFixed(2)}',
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: AppTheme.textSecondary,

@@ -97,7 +97,7 @@ class ElementoMenu extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              '\$${(item['precio'] as num).toStringAsFixed(2)}',
+                              '\$${(item['precio'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -107,7 +107,7 @@ class ElementoMenu extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Bs ${(item['precio_bs'] as num).toStringAsFixed(2)}',
+                            'Bs ${(item['precio_bs'] as num?)?.toStringAsFixed(2) ?? '0.00'}',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppTheme.textSecondary,

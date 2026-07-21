@@ -425,7 +425,7 @@ class _CarritoPageState extends State<CarritoPage> {
                                         )
                                       : Center(
                                           child: Icon(
-                                            item['icono'],
+                                            item['icono'] ?? Icons.restaurant_menu,
                                             size: 28,
                                             color: AppTheme.primaryColor
                                                 .withValues(alpha: 0.5),

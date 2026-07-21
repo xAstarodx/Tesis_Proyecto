@@ -7,6 +7,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../services/producto_service.dart';
 import '../../widgets/login.dart';
 import '../../theme/app_theme.dart';
@@ -77,7 +80,11 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           table: 'pedido',
           callback: (payload) {
             if (payload.eventType == PostgresChangeEvent.insert) {
-              _audioPlayer.play(AssetSource('sounds/notificacion.mp3'));
+              try {
+                _audioPlayer.play(AssetSource('sounds/notificacion.mp3'));
+              } catch (e) {
+                debugPrint('Error reproduciendo notificación: $e');
+              }
             }
             _cargarDatos();
           },
@@ -110,7 +117,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
       final productos = resultados[0] as List<Map<String, dynamic>>;
       final tasaInfo = resultados[1] as Map<String, dynamic>?;
-      final tasa = tasaInfo?['valor'] as double? ?? 1.0;
+      final tasa = (tasaInfo?['valor'] as num?)?.toDouble() ?? 1.0;
       final pedidos = resultados[2] as List<Map<String, dynamic>>;
       final categorias = resultados[3] as List<Map<String, dynamic>>;
       final historial = resultados[4] as List<Map<String, dynamic>>;
@@ -336,8 +343,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     double totalUsd = 0.0;
 
     for (var d in detalles) {
-      final cantidad = (d['cantidad'] as num).toDouble();
-      final precio = (d['precio_unitario'] as num).toDouble();
+      final cantidad = (d['cantidad'] as num?)?.toDouble() ?? 0.0;
+      final precio = (d['precio_unitario'] as num?)?.toDouble() ?? 0.0;
       totalUsd += cantidad * precio;
     }
 
@@ -447,8 +454,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               const SizedBox(height: 8),
               ...detalles.map((d) {
                 final prod = d['productos'];
-                final cantidad = d['cantidad'] as num;
-                final precio = d['precio_unitario'] as num;
+                final cantidad = d['cantidad'] as num? ?? 0;
+                final precio = d['precio_unitario'] as num? ?? 0;
                 final subtotal = cantidad * precio;
                 final desc =
                     d['Descripcion'] != null &&
@@ -2045,8 +2052,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             .map((d) {
                               final prod = d['productos'];
                               final subtotal =
-                                  (d['cantidad'] as num) *
-                                  (d['precio_unitario'] as num);
+                                  ((d['cantidad'] as num?) ?? 0) *
+                                  ((d['precio_unitario'] as num?) ?? 0);
                               totalUsd += subtotal;
                               final desc =
                                   d['Descripcion'] != null &&
@@ -2067,8 +2074,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                             final tasaDolar = detallesPago.first['tasa_dolar'];
                             if (tasaDolar != null &&
                                 tasaDolar['valor'] != null) {
-                              tasaAplicada = (tasaDolar['valor'] as num)
-                                  .toDouble();
+                              tasaAplicada = (tasaDolar['valor'] as num?)
+                                  ?.toDouble() ?? _tasaCambioValor;
                             }
                           }
                         }
@@ -2559,19 +2566,81 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton.icon(
-            onPressed: _mostrarDialogoAgregarProducto,
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Añadir Producto'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentColor,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final apilado = constraints.maxWidth < 400;
+              if (apilado) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _mostrarDialogoAgregarProducto,
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: const Text('Añadir Producto'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accentColor,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _mostrarDialogoImportarExcel,
+                        icon: const Icon(Icons.file_upload_outlined),
+                        label: const Text('Importar Excel'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _mostrarDialogoAgregarProducto,
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Añadir Producto'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _mostrarDialogoImportarExcel,
+                      icon: const Icon(Icons.file_upload_outlined),
+                      label: const Text('Importar Excel'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
         Expanded(
@@ -2972,6 +3041,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
 
+                // ponytail: linear scan for duplicate name, OK for <10k products
+                final duplicado = _todosLosProductos.any(
+                  (p) => (p['nombre'] as String).toLowerCase() == nombre.toLowerCase(),
+                );
+                if (duplicado) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Ya existe un producto con ese nombre'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+
                 try {
                   await productoService.guardarProducto(
                     nombre: nombre,
@@ -3011,6 +3094,131 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         ),
       ),
     );
+  }
+
+  void _mostrarDialogoImportarExcel() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Importar Productos'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Descarga la plantilla, llénala y súbela.',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _descargarPlantilla(),
+                icon: const Icon(Icons.download),
+                label: const Text('Descargar Formato'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _subirYProcesarExcel(context),
+                icon: const Icon(Icons.file_upload),
+                label: const Text('Subir archivo Excel'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _descargarPlantilla() async {
+    try {
+      final bytes = await productoService.generarPlantillaExcel();
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/plantilla_productos.xlsx');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Plantilla de productos',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al descargar: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _subirYProcesarExcel(BuildContext dialogContext) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        withData: true,
+      );
+
+      if (result == null || result.files.single.bytes == null) return;
+
+      Navigator.of(dialogContext).pop();
+
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Procesando archivo...')),
+      );
+
+      final bytes = result.files.single.bytes!;
+      final cats = List<Map<String, dynamic>>.from(_categorias);
+      final res = await productoService.importarProductosDesdeExcel(bytes, cats);
+
+      await _cargarDatos();
+
+      if (mounted) {
+        messenger.hideCurrentSnackBar();
+        showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Importación completada'),
+            content: Text(
+              'Creados: ${res['creados']}\n'
+              'Actualizados: ${res['actualizados']}\n'
+              'Errores: ${res['errores']}',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   void _mostrarDialogoEditarProducto(Map<String, dynamic> producto) {
@@ -3250,7 +3458,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         );
         pedidosPagados = pedidosPagados.where((p) {
           if (p['fecha_creacion'] == null) return false;
-          final fechaPed = DateTime.parse(p['fecha_creacion'] as String).toLocal();
+          final fechaPed = (p['fecha_creacion'] is String) ? DateTime.parse(p['fecha_creacion'] as String).toLocal() : DateTime.now();
           return fechaPed.isAfter(inicio.subtract(const Duration(milliseconds: 1))) &&
               fechaPed.isBefore(fin.add(const Duration(milliseconds: 1)));
         }).toList();
@@ -3284,7 +3492,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           if (detallesPago != null && detallesPago.isNotEmpty) {
             final tasaDolar = detallesPago.first['tasa_dolar'];
             if (tasaDolar != null && tasaDolar['valor'] != null) {
-              tasaAplicada = (tasaDolar['valor'] as num).toDouble();
+              tasaAplicada = (tasaDolar['valor'] as num?)
+                  ?.toDouble() ?? _tasaCambioValor;
             }
           }
         }
@@ -3292,8 +3501,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         final detalles = p['detalle_pedido'] as List<dynamic>? ?? [];
         for (var d in detalles) {
           final nombre = d['productos']?['nombre'] ?? 'Producto Desconocido';
-          final cant = (d['cantidad'] as num).toDouble();
-          final precio = (d['precio_unitario'] as num).toDouble();
+          final cant = (d['cantidad'] as num?)?.toDouble() ?? 0.0;
+          final precio = (d['precio_unitario'] as num?)?.toDouble() ?? 0.0;
           final subtotal = cant * precio;
           final subtotalBs = subtotal * tasaAplicada;
 
@@ -3456,7 +3665,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       for (var p in pedidosPendientes) {
         final detalles = p['detalle_pedido'] as List<dynamic>? ?? [];
         for (var d in detalles) {
-          granTotalUsd += (d['cantidad'] as num) * (d['precio_unitario'] as num);
+          granTotalUsd += ((d['cantidad'] as num?) ?? 0) * ((d['precio_unitario'] as num?) ?? 0);
         }
       }
       final granTotalBs = granTotalUsd * _tasaCambioValor;
@@ -3467,7 +3676,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         final cliente = p['usuario']?['nombre'] ?? 'Desconocido';
         final correo = p['usuario']?['correo'] ?? 'Sin correo';
 
-        final fechaPed = p['fecha_creacion'] != null
+        final fechaPed = (p['fecha_creacion'] is String)
             ? DateTime.parse(p['fecha_creacion'] as String).toLocal().toString().split('.')[0]
             : 'N/A';
         final horaRecogida = p['hora_recogida'] ?? 'Sin hora';

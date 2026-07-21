@@ -194,8 +194,9 @@ class SupabaseService {
           'nota': nota,
         })
         .select('pedido_id')
-        .single();
+        .maybeSingle();
 
+    if (pedidoRes == null) throw Exception('Error al crear el pedido');
     final pedidoId = pedidoRes['pedido_id'];
 
     if (referencia != null || comprobanteUrl != null) {
@@ -218,7 +219,11 @@ class SupabaseService {
         )
         .toList();
 
-    await _cliente.from('detalle_pedido').insert(detalles);
+    try {
+      await _cliente.from('detalle_pedido').insert(detalles);
+    } catch (e) {
+      debugPrint('Error al insertar detalle del pedido: $e');
+    }
   }
 
   Future<String?> getCurrentUserId() async {

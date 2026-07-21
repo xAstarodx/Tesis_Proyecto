@@ -1,9 +1,38 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:excel/excel.dart';
+
+String _detectarExtension(Uint8List bytes) {
+  if (bytes.length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return 'png';
+  if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) return 'jpg';
+  if (bytes.length >= 4 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46) return 'webp';
+  if (bytes.length >= 3 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) return 'gif';
+  return 'png';
+}
 
 class ProductoService {
   final supabase = Supabase.instance.client;
+
+  Future<String?> _subirImagen(Uint8List bytes) async {
+    try {
+      final ext = _detectarExtension(bytes);
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+      await supabase.storage
+          .from('imagenes_productos')
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: FileOptions(contentType: 'image/$ext'),
+          );
+      return supabase.storage
+          .from('imagenes_productos')
+          .getPublicUrl(fileName);
+    } catch (e) {
+      debugPrint('Error subiendo imagen: $e');
+      return null;
+    }
+  }
 
   Future<void> guardarProducto({
     required String nombre,
@@ -12,27 +41,18 @@ class ProductoService {
     required int stock,
     required int categoriaId,
     File? imagenFile,
+    Uint8List? imagenBytes,
   }) async {
     String? imagenUrl;
 
-    if (imagenFile != null) {
+    if (imagenBytes != null) {
+      imagenUrl = await _subirImagen(imagenBytes);
+    } else if (imagenFile != null) {
       try {
         final bytes = await imagenFile.readAsBytes();
-        final fileExt = imagenFile.path.split('.').last;
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-        final filePath = fileName;
-        await supabase.storage
-            .from('imagenes_productos')
-            .uploadBinary(
-              filePath,
-              bytes,
-              fileOptions: FileOptions(contentType: 'image/$fileExt'),
-            );
-        imagenUrl = supabase.storage
-            .from('imagenes_productos')
-            .getPublicUrl(filePath);
+        imagenUrl = await _subirImagen(bytes);
       } catch (e) {
-        debugPrint('Error subiendo imagen: $e');
+        debugPrint('Error leyendo archivo de imagen: $e');
       }
     }
 
@@ -100,27 +120,18 @@ class ProductoService {
     required int stock,
     required double precioUsd,
     File? imagenFile,
+    Uint8List? imagenBytes,
   }) async {
     String? imagenUrl;
 
-    if (imagenFile != null) {
+    if (imagenBytes != null) {
+      imagenUrl = await _subirImagen(imagenBytes);
+    } else if (imagenFile != null) {
       try {
         final bytes = await imagenFile.readAsBytes();
-        final fileExt = imagenFile.path.split('.').last;
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-        final filePath = fileName;
-        await supabase.storage
-            .from('imagenes_productos')
-            .uploadBinary(
-              filePath,
-              bytes,
-              fileOptions: FileOptions(contentType: 'image/$fileExt'),
-            );
-        imagenUrl = supabase.storage
-            .from('imagenes_productos')
-            .getPublicUrl(filePath);
+        imagenUrl = await _subirImagen(bytes);
       } catch (e) {
-        debugPrint('Error subiendo imagen: $e');
+        debugPrint('Error leyendo archivo de imagen: $e');
       }
     }
 
@@ -179,8 +190,9 @@ class ProductoService {
         .from('registro_pagos')
         .insert({'id_pedido': pedidoId, 'monto_total_pedido': montoTotalUsd})
         .select('id_pago')
-        .single();
+        .maybeSingle();
 
+    if (registroPagoRes == null) throw Exception('Error al crear registro de pago');
     final idPago = registroPagoRes['id_pago'];
 
     await supabase.from('detalle_pago').insert({
@@ -288,7 +300,7 @@ class ProductoService {
           totalUsd += (d['cantidad'] as num) * (d['precio_unitario'] as num);
         }
 
-        final formaPagoId = pedidoData['forma_pago']['forma_pago_id'] as int;
+        final formaPagoId = (pedidoData['forma_pago']?['forma_pago_id'] as num?)?.toInt() ?? 1;
 
         final datosPagoRaw = pedidoData['datos_pago_orden'];
         final Map<String, dynamic>? datosUsuario =
@@ -331,5 +343,134 @@ class ProductoService {
     } catch (e) {
       throw Exception('Error al eliminar producto: $e');
     }
+  }
+
+  Future<Uint8List> generarPlantillaExcel() async {
+    final excel = Excel.createExcel();
+    final sheet = excel['Productos'];
+    sheet.appendRow([
+      TextCellValue('nombre'),
+      TextCellValue('descripcion'),
+      TextCellValue('precio'),
+      TextCellValue('stock'),
+      TextCellValue('categoria'),
+      TextCellValue('imagen_url'),
+    ]);
+    sheet.appendRow([
+      TextCellValue('Café Americano'),
+      TextCellValue('Café americano 500ml'),
+      IntCellValue(3),
+      IntCellValue(50),
+      TextCellValue('Bebidas'),
+      TextCellValue('https://ejemplo.com/imagen.jpg'),
+    ]);
+    final encoded = excel.encode();
+    return Uint8List.fromList(encoded ?? []);
+  }
+
+  // ponytail: linear scan on name for upsert; add DB unique constraint if scale requires it
+  Future<Map<String, int>> importarProductosDesdeExcel(
+    Uint8List bytes,
+    List<Map<String, dynamic>> categorias,
+  ) async {
+    final excel = Excel.decodeBytes(bytes);
+    if (excel.tables.values.isEmpty) return {'creados': 0, 'actualizados': 0, 'errores': 0};
+    final sheet = excel.tables.values.first;
+    final rows = sheet.rows;
+
+    int creados = 0, actualizados = 0, errores = 0;
+
+    final existentes = await obtenerTodosLosProductos();
+    final productosPorNombre = <String, Map<String, dynamic>>{};
+    for (final p in existentes) {
+      productosPorNombre[p['nombre'] as String] = p;
+    }
+
+    final catPorNombre = <String, int>{};
+    for (final c in categorias) {
+      catPorNombre[(c['nombre_categoria'] as String).toLowerCase()] =
+          c['categoria_id'] as int;
+    }
+
+    for (int i = 1; i < rows.length; i++) {
+      final row = rows[i];
+      if (row.length < 5) continue;
+
+      final nombre = (row[0]?.value?.toString() ?? '').trim();
+      if (nombre.isEmpty) continue;
+
+      final descripcion = (row[1]?.value?.toString() ?? '').trim();
+      final precio = double.tryParse(
+        (row[2]?.value?.toString() ?? '').replaceAll(',', '.'),
+      );
+      final stock = int.tryParse(row[3]?.value?.toString() ?? '');
+      final catName = (row[4]?.value?.toString() ?? '').trim().toLowerCase();
+
+      if (precio == null || stock == null) {
+        errores++;
+        continue;
+      }
+
+      final categoriaId = catPorNombre[catName];
+      if (categoriaId == null) {
+        errores++;
+        continue;
+      }
+
+      Uint8List? imagenBytes;
+      if (row.length > 5) {
+        final imgVal = (row[5]?.value?.toString() ?? '').trim();
+        if (imgVal.isNotEmpty) {
+          try {
+            if (imgVal.startsWith('http://') || imgVal.startsWith('https://')) {
+              final client = HttpClient();
+              try {
+                final req = await client.getUrl(Uri.parse(imgVal));
+                final res = await req.close();
+                final chunks = <int>[];
+                await for (final chunk in res) {
+                  chunks.addAll(chunk);
+                }
+                imagenBytes = Uint8List.fromList(chunks);
+              } finally {
+                client.close();
+              }
+            } else {
+              final file = File(imgVal);
+              if (await file.exists()) {
+                imagenBytes = await file.readAsBytes();
+              }
+            }
+          } catch (e) {
+            debugPrint('Error procesando imagen para $nombre: $e');
+          }
+        }
+      }
+
+      if (productosPorNombre.containsKey(nombre)) {
+        final existing = productosPorNombre[nombre]!;
+        await actualizarProducto(
+          productoId: existing['producto_id'] as int,
+          nombre: nombre,
+          descripcion: descripcion,
+          stock: stock,
+          precioUsd: precio,
+          imagenBytes: imagenBytes,
+        );
+        actualizados++;
+      } else {
+        await guardarProducto(
+          nombre: nombre,
+          descripcion: descripcion,
+          precioUsd: precio,
+          stock: stock,
+          categoriaId: categoriaId,
+          imagenBytes: imagenBytes,
+        );
+        creados++;
+      }
+    }
+
+    return {'creados': creados, 'actualizados': actualizados, 'errores': errores};
   }
 }

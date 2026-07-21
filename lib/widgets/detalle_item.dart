@@ -52,8 +52,8 @@ class _DetalleItemState extends State<DetalleItem> {
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
-    final precioTotal = (item['precio'] as num) * _cantidad;
-    final precioBsTotal = (item['precio_bs'] as num) * _cantidad;
+    final precioTotal = ((item['precio'] as num?) ?? 0) * _cantidad;
+    final precioBsTotal = ((item['precio_bs'] as num?) ?? 0) * _cantidad;
     final int stockDisponible = item['stock'] ?? 0;
 
     return Container(
