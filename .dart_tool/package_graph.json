@@ -7,6 +7,7 @@
       "name": "app",
       "version": "1.0.0+1",
       "dependencies": [
+        "archive",
         "audioplayers",
         "cupertino_icons",
         "excel",
@@ -95,6 +96,14 @@
         "plugin_platform_interface",
         "web",
         "win32"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "3.6.1",
+      "dependencies": [
+        "crypto",
+        "path"
       ]
     },
     {
@@ -465,6 +474,13 @@
       ]
     },
     {
+      "name": "crypto",
+      "version": "3.0.7",
+      "dependencies": [
+        "typed_data"
+      ]
+    },
+    {
       "name": "equatable",
       "version": "2.1.0",
       "dependencies": [
@@ -479,14 +495,6 @@
         "collection",
         "meta",
         "petitparser"
-      ]
-    },
-    {
-      "name": "archive",
-      "version": "3.6.1",
-      "dependencies": [
-        "crypto",
-        "path"
       ]
     },
     {
@@ -522,13 +530,6 @@
       "dependencies": [
         "meta",
         "vector_math"
-      ]
-    },
-    {
-      "name": "crypto",
-      "version": "3.0.7",
-      "dependencies": [
-        "typed_data"
       ]
     },
     {
@@ -902,6 +903,13 @@
       ]
     },
     {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "dependencies": [
+        "collection"
+      ]
+    },
+    {
       "name": "petitparser",
       "version": "7.0.2",
       "dependencies": [
@@ -917,13 +925,6 @@
         "source_span",
         "string_scanner",
         "typed_data"
-      ]
-    },
-    {
-      "name": "typed_data",
-      "version": "1.4.0",
-      "dependencies": [
-        "collection"
       ]
     },
     {

@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:excel/excel.dart';
+import 'package:archive/archive.dart';
 
 String _detectarExtension(Uint8List bytes) {
   if (bytes.length >= 4 &&
@@ -382,13 +384,45 @@ class ProductoService {
     return Uint8List.fromList(encoded ?? []);
   }
 
+  Uint8List _limpiarNumFmtIds(Uint8List bytes) {
+    try {
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final outFiles = <ArchiveFile>[];
+      for (final file in archive) {
+        if (file.isFile && file.name == 'xl/styles.xml') {
+          var content = utf8.decode(file.content as List<int>);
+          content = content.replaceAllMapped(
+            RegExp(r'<numFmt\s+numFmtId="(\d+)"[^>]*/>'),
+            (m) {
+              final id = int.tryParse(m.group(1)!);
+              if (id != null && id >= 0 && id < 164) return '';
+              return m.group(0)!;
+            },
+          );
+          final newBytes = utf8.encode(content);
+          outFiles.add(ArchiveFile(file.name, newBytes.length, newBytes));
+        } else {
+          final data = file.content as List<int>;
+          outFiles.add(ArchiveFile(file.name, data.length, data));
+        }
+      }
+      final out = Archive();
+      for (final f in outFiles) {
+        out.addFile(f);
+      }
+      return Uint8List.fromList(ZipEncoder().encode(out)!);
+    } catch (_) {
+      return bytes;
+    }
+  }
+
   Future<Map<String, int>> importarProductosDesdeExcel(
     Uint8List bytes,
     List<Map<String, dynamic>> categorias,
   ) async {
     late Excel excel;
     try {
-      excel = Excel.decodeBytes(bytes);
+      excel = Excel.decodeBytes(_limpiarNumFmtIds(bytes));
     } catch (e) {
       throw Exception(
         'El archivo Excel tiene formatos de celda incompatibles. '
