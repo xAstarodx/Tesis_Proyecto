@@ -356,22 +356,28 @@ class ProductoService {
   Future<Uint8List> generarPlantillaExcel() async {
     final excel = Excel.createExcel();
     final sheet = excel['Productos'];
-    sheet.appendRow([
-      TextCellValue('nombre'),
-      TextCellValue('descripcion'),
-      TextCellValue('precio'),
-      TextCellValue('stock'),
-      TextCellValue('categoria'),
-      TextCellValue('imagen_url'),
-    ]);
-    sheet.appendRow([
-      TextCellValue('Café Americano'),
-      TextCellValue('Café americano 500ml'),
-      IntCellValue(3),
-      IntCellValue(50),
-      TextCellValue('Bebidas'),
-      TextCellValue('https://ejemplo.com/imagen.jpg'),
-    ]);
+    final textStyle = CellStyle(numberFormat: NumFormat.standard_49);
+
+    final headers = ['nombre', 'descripcion', 'precio', 'stock', 'categoria', 'imagen_url'];
+    final colLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+    for (var i = 0; i < headers.length; i++) {
+      sheet.updateCell(
+        CellIndex.indexByString('${colLetters[i]}1'),
+        TextCellValue(headers[i]),
+        cellStyle: textStyle,
+      );
+    }
+
+    final data = ['Café Americano', 'Café americano 500ml', '3', '50', 'Bebidas', 'https://ejemplo.com/imagen.jpg'];
+    for (var i = 0; i < data.length; i++) {
+      sheet.updateCell(
+        CellIndex.indexByString('${colLetters[i]}2'),
+        TextCellValue(data[i]),
+        cellStyle: textStyle,
+      );
+    }
+
     final encoded = excel.encode();
     return Uint8List.fromList(encoded ?? []);
   }
