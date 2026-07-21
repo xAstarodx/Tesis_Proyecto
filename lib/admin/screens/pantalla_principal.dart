@@ -8,8 +8,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import '../services/producto_service.dart';
 import '../../widgets/login.dart';
 import '../../theme/app_theme.dart';
@@ -3211,17 +3209,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _descargarPlantilla() async {
     try {
       final bytes = await productoService.generarPlantillaExcel();
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/plantilla_productos.xlsx');
-      await file.writeAsBytes(bytes);
-      await Share.shareXFiles([
-        XFile(file.path),
-      ], text: 'Plantilla de productos');
+      final result = await FilePicker.platform.saveFile(
+        fileName: 'plantilla_productos.xlsx',
+        bytes: bytes,
+      );
+      if (result != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Plantilla guardada')),
+        );
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al descargar: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al descargar: $e')),
+        );
       }
     }
   }
