@@ -180,11 +180,11 @@ class _CarritoPageState extends State<CarritoPage> {
       return;
     }
 
-    if (_referenciaController.text.trim().isEmpty &&
-        _comprobanteImage == null) {
+    final refText = _referenciaController.text.trim();
+    if (refText.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ingrese referencia o foto del pago móvil'),
+          content: Text('Debe ingresar los 4 dígitos de la referencia'),
           backgroundColor: AppTheme.warningColor,
         ),
       );
@@ -813,6 +813,7 @@ class _CarritoPageState extends State<CarritoPage> {
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(4),
             ],
           ),
           const SizedBox(height: 16),

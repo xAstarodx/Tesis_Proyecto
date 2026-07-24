@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 String _detectarExtension(Uint8List bytes) {
@@ -238,6 +240,23 @@ class ProductoService {
       'valor': nuevaTasa,
       'fecha_mod': DateTime.now().toIso8601String(),
     });
+  }
+
+  Future<void> autoActualizarTasaCambio() async {
+    try {
+      final res = await http.get(Uri.parse('https://ve.dolarapi.com/v1/dolares/oficial'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final valor = (data['promedio'] as num).toDouble();
+        final existente = await obtenerTasaCambioInfo();
+        if (existente == null || (existente['valor'] as double) != valor) {
+          await actualizarTasaCambio(valor);
+          debugPrint('Tasa auto-actualizada: $valor Bs/USD');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error auto-actualizando tasa: $e');
+    }
   }
 
   Future<List<Map<String, dynamic>>> obtenerPedidos() async {

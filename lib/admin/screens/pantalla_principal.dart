@@ -101,6 +101,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   }
 
   Future<void> _cargarDatos() async {
+    await productoService.autoActualizarTasaCambio();
     setState(() => _estaCargando = true);
     try {
       final resultados = await Future.wait([
@@ -3450,23 +3451,107 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
+          margin: const pw.EdgeInsets.all(28),
+          footer: (pw.Context context) {
+            return pw.Container(
+              margin: const pw.EdgeInsets.only(top: 12),
+              padding: const pw.EdgeInsets.only(top: 8),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Cafetín ISABORES - Sistema de Gestión',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                  ),
+                  pw.Text(
+                    'Página ${context.pageNumber} de ${context.pagesCount}',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                  ),
+                ],
+              ),
+            );
+          },
           build: (pw.Context context) {
             return [
-              pw.Header(
-                level: 0,
+              pw.Container(
+                padding: const pw.EdgeInsets.all(14),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('1B4F72'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('$tituloReporte - Cafetín ISABORES'),
-                    pw.Text(fecha, style: const pw.TextStyle(fontSize: 10)),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'CAFETÍN ISABORES',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          tituloReporte,
+                          style: const pw.TextStyle(
+                            fontSize: 11,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'Fecha: $fecha',
+                          style: const pw.TextStyle(
+                            fontSize: 9,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: pw.BoxDecoration(
+                            color: PdfColor.fromHex('E67E22'),
+                            borderRadius: const pw.BorderRadius.all(
+                              pw.Radius.circular(4),
+                            ),
+                          ),
+                          child: pw.Text(
+                            'REPORTE DE VENTAS',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 16),
               pw.Text(
                 'Resumen de Productos Vendidos (Pagados):',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('1B4F72'),
+                ),
               ),
               pw.SizedBox(height: 10),
               pw.TableHelper.fromTextArray(
@@ -3477,7 +3562,28 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   'Total (USD)',
                   'Total (Bs)',
                 ],
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                headerStyle: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                  fontSize: 9,
+                ),
+                headerDecoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('1B4F72'),
+                ),
+                cellStyle: const pw.TextStyle(fontSize: 9),
+                cellAlignment: pw.Alignment.centerLeft,
+                cellAlignments: {
+                  1: pw.Alignment.centerRight,
+                  2: pw.Alignment.centerRight,
+                  3: pw.Alignment.centerRight,
+                  4: pw.Alignment.centerRight,
+                },
+                rowDecoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('F5F7FA'),
+                ),
+                oddRowDecoration: const pw.BoxDecoration(
+                  color: PdfColors.white,
+                ),
                 data: ventas
                     .map(
                       (v) => [
@@ -3490,29 +3596,60 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     )
                     .toList(),
               ),
-              pw.SizedBox(height: 30),
-              pw.Divider(),
+              pw.SizedBox(height: 20),
               pw.Align(
                 alignment: pw.Alignment.centerRight,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      'TOTAL GENERAL (USD): \$${granTotal.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
+                child: pw.Container(
+                  width: 250,
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('F5F7FA'),
+                    borderRadius: const pw.BorderRadius.all(
+                      pw.Radius.circular(8),
                     ),
-                    pw.Text(
-                      'TOTAL GENERAL (BS): Bs ${granTotalBs.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.blue,
-                      ),
+                    border: pw.Border.all(
+                      color: PdfColor.fromHex('1B4F72'),
+                      width: 1,
                     ),
-                  ],
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        'TOTAL GENERAL (USD)',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('7F8C8D'),
+                        ),
+                      ),
+                      pw.Text(
+                        '\$${granTotal.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                          fontSize: 16,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('E67E22'),
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'TOTAL GENERAL (BS)',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('7F8C8D'),
+                        ),
+                      ),
+                      pw.Text(
+                        'Bs ${granTotalBs.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('1B4F72'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ];
@@ -3627,31 +3764,106 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
+          margin: const pw.EdgeInsets.all(28),
+          footer: (pw.Context context) {
+            return pw.Container(
+              margin: const pw.EdgeInsets.only(top: 12),
+              padding: const pw.EdgeInsets.only(top: 8),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Cafetín ISABORES - Sistema de Gestión',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                  ),
+                  pw.Text(
+                    'Página ${context.pageNumber} de ${context.pagesCount}',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                  ),
+                ],
+              ),
+            );
+          },
           build: (pw.Context context) {
             return [
-              pw.Header(
-                level: 0,
+              pw.Container(
+                padding: const pw.EdgeInsets.all(14),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('1B4F72'),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text(
-                      'Reporte de Pedidos Pendientes - Cafetín ISABORES',
-                      style: pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'CAFETÍN ISABORES',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          'Reporte de Pedidos Pendientes',
+                          style: const pw.TextStyle(
+                            fontSize: 11,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                    pw.Text(fecha, style: const pw.TextStyle(fontSize: 10)),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'Fecha: $fecha',
+                          style: const pw.TextStyle(
+                            fontSize: 9,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: pw.BoxDecoration(
+                            color: PdfColor.fromHex('E67E22'),
+                            borderRadius: const pw.BorderRadius.all(
+                              pw.Radius.circular(4),
+                            ),
+                          ),
+                          child: pw.Text(
+                            'PEDIDOS PENDIENTES',
+                            style: pw.TextStyle(
+                              fontSize: 8,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 16),
               pw.Text(
                 'Pedidos pendientes de preparación o entrega (${pedidosPendientes.length}):',
                 style: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
                   fontSize: 12,
+                  color: PdfColor.fromHex('1B4F72'),
                 ),
               ),
               pw.SizedBox(height: 10),
@@ -3669,8 +3881,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   fontSize: 8,
                   color: PdfColors.white,
                 ),
-                headerDecoration: const pw.BoxDecoration(
-                  color: PdfColors.blueGrey800,
+                headerDecoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('1B4F72'),
                 ),
                 cellStyle: const pw.TextStyle(fontSize: 8),
                 cellAlignment: pw.Alignment.topLeft,
@@ -3678,6 +3890,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                   0: pw.Alignment.topCenter,
                   5: pw.Alignment.topRight,
                 },
+                rowDecoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('F5F7FA'),
+                ),
+                oddRowDecoration: const pw.BoxDecoration(
+                  color: PdfColors.white,
+                ),
                 data: tableData,
                 columnWidths: const {
                   0: pw.FixedColumnWidth(35),
@@ -3689,28 +3907,59 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 },
               ),
               pw.SizedBox(height: 20),
-              pw.Divider(),
               pw.Align(
                 alignment: pw.Alignment.centerRight,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Text(
-                      'TOTAL PENDIENTE (USD): \$${granTotalUsd.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
+                child: pw.Container(
+                  width: 250,
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('F5F7FA'),
+                    borderRadius: const pw.BorderRadius.all(
+                      pw.Radius.circular(8),
                     ),
-                    pw.Text(
-                      'TOTAL PENDIENTE (BS): Bs ${granTotalBs.toStringAsFixed(2)}',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.blue,
-                      ),
+                    border: pw.Border.all(
+                      color: PdfColor.fromHex('1B4F72'),
+                      width: 1,
                     ),
-                  ],
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(
+                        'TOTAL PENDIENTE (USD)',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('7F8C8D'),
+                        ),
+                      ),
+                      pw.Text(
+                        '\$${granTotalUsd.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                          fontSize: 16,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('E67E22'),
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'TOTAL PENDIENTE (BS)',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('7F8C8D'),
+                        ),
+                      ),
+                      pw.Text(
+                        'Bs ${granTotalBs.toStringAsFixed(2)}',
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('1B4F72'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ];
