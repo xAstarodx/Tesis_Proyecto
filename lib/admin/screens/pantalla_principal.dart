@@ -7,6 +7,10 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' hide Border;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/producto_service.dart';
 import '../../widgets/login.dart';
 import '../../theme/app_theme.dart';
@@ -2608,41 +2612,88 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               final apilado = constraints.maxWidth < 400;
               if (apilado) {
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _mostrarDialogoAgregarProducto,
-                        icon: const Icon(Icons.add_circle_outline),
-                        label: const Text('Añadir Producto'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentColor,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 44),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                    ElevatedButton.icon(
+                      onPressed: _mostrarDialogoAgregarProducto,
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: const Text('Añadir Producto'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _mostrarDialogoImportarExcel,
+                      icon: const Icon(Icons.file_upload_outlined),
+                      label: const Text('Subir Excel'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _descargarPlantillaExcel,
+                        icon: const Icon(Icons.download, size: 16),
+                        label: const Text('Descargar plantilla', style: TextStyle(fontSize: 13)),
                       ),
                     ),
                   ],
                 );
               }
-              return SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _mostrarDialogoAgregarProducto,
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text('Añadir Producto'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentColor,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _mostrarDialogoAgregarProducto,
+                          icon: const Icon(Icons.add_circle_outline),
+                          label: const Text('Añadir Producto'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentColor,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _mostrarDialogoImportarExcel,
+                          icon: const Icon(Icons.file_upload_outlined),
+                          label: const Text('Subir Excel'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _descargarPlantillaExcel,
+                      icon: const Icon(Icons.download, size: 16),
+                      label: const Text('Descargar plantilla Excel', style: TextStyle(fontSize: 13)),
                     ),
                   ),
-                ),
+                ],
               );
             },
           ),
@@ -2872,6 +2923,250 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _descargarPlantillaExcel() async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['Productos'];
+
+      sheet.appendRow([
+        TextCellValue('nombre'),
+        TextCellValue('descripcion'),
+        TextCellValue('precio'),
+        TextCellValue('stock'),
+        TextCellValue('categoria'),
+        TextCellValue('imagen_url'),
+      ]);
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/plantilla_productos.xlsx');
+      await file.writeAsBytes(excel.encode()!);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Plantilla Productos',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al descargar plantilla: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _mostrarDialogoImportarExcel() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx', 'xls'],
+    );
+    if (result == null || result.files.single.path == null) return;
+
+    final bytes = File(result.files.single.path!).readAsBytesSync();
+    final excel = Excel.decodeBytes(bytes);
+
+    if (excel.tables.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El archivo Excel está vacío'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final sheet = excel.tables.values.first;
+    if (sheet.rows.length < 2) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El archivo debe tener encabezados + al menos 1 fila de datos'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final headers = sheet.rows.first
+        .map((c) => (c?.value?.toString() ?? '').trim().toLowerCase())
+        .toList();
+
+    final colNombre = headers.indexOf('nombre');
+    final colDesc = headers.indexOf('descripcion');
+    final colPrecio = headers.indexOf('precio');
+    final colStock = headers.indexOf('stock');
+    final colCat = headers.indexOf('categoria');
+    final colImg = headers.indexOf('imagen_url');
+
+    if (colNombre == -1 || colPrecio == -1 || colStock == -1 || colCat == -1) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El Excel debe tener columnas: nombre, precio, stock, categoria'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final List<Map<String, dynamic>> parsed = [];
+    for (int i = 1; i < sheet.rows.length; i++) {
+      final row = sheet.rows[i];
+      final nombre = row.length > colNombre ? (row[colNombre]?.value?.toString() ?? '').trim() : '';
+      if (nombre.isEmpty) continue;
+      parsed.add({
+        'nombre': nombre,
+        'descripcion': colDesc != -1 && row.length > colDesc ? (row[colDesc]?.value?.toString() ?? '').trim() : '',
+        'precio': colPrecio != -1 && row.length > colPrecio ? row[colPrecio]?.value?.toString() ?? '' : '',
+        'stock': colStock != -1 && row.length > colStock ? row[colStock]?.value?.toString() ?? '' : '',
+        'categoria': colCat != -1 && row.length > colCat ? (row[colCat]?.value?.toString() ?? '').trim() : '',
+        'imagen_url': colImg != -1 && row.length > colImg ? (row[colImg]?.value?.toString() ?? '').trim() : '',
+      });
+    }
+
+    if (parsed.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se encontraron filas con datos válidos'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          final erroresPrevia = <int, String>{};
+          for (int i = 0; i < parsed.length; i++) {
+            final p = parsed[i];
+            final errs = <String>[];
+            if ((p['nombre'] as String).isEmpty) errs.add('nombre vacío');
+            final precio = double.tryParse((p['precio'] as String).replaceAll(',', '.'));
+            if (precio == null || precio <= 0) errs.add('precio inválido');
+            final stock = int.tryParse(p['stock'] as String);
+            if (stock == null || stock < 0) errs.add('stock inválido');
+            if ((p['categoria'] as String).isEmpty) errs.add('categoría vacía');
+            if (errs.isNotEmpty) erroresPrevia[i] = errs.join(', ');
+          }
+
+          final nombresExistentes = _todosLosProductos
+              .map((e) => (e['nombre'] as String).toLowerCase().trim())
+              .toSet();
+
+          return AlertDialog(
+            title: Text('Importar ${parsed.length} producto(s)'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (erroresPrevia.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${erroresPrevia.length} fila(s) con errores serán omitidas',
+                        style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                      ),
+                    ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: parsed.length,
+                      itemBuilder: (_, i) {
+                        final p = parsed[i];
+                        final err = erroresPrevia[i];
+                        final dupe = nombresExistentes.contains((p['nombre'] as String).toLowerCase().trim());
+                        return ListTile(
+                          dense: true,
+                          leading: CircleAvatar(
+                            radius: 14,
+                            backgroundColor: err != null
+                                ? Colors.red.shade100
+                                : dupe
+                                ? Colors.orange.shade100
+                                : Colors.green.shade100,
+                            child: Icon(
+                              err != null ? Icons.close : dupe ? Icons.warning : Icons.check,
+                              size: 16,
+                              color: err != null
+                                  ? Colors.red
+                                  : dupe
+                                  ? Colors.orange
+                                  : Colors.green,
+                            ),
+                          ),
+                          title: Text(p['nombre'] as String, style: const TextStyle(fontSize: 14)),
+                          subtitle: Text(
+                            err ?? (dupe ? 'Ya existe en la BD' : '${p['categoria']} · \$${p['precio']} · stock: ${p['stock']}'),
+                            style: TextStyle(fontSize: 12, color: err != null ? Colors.red : dupe ? Colors.orange : Colors.grey),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor, foregroundColor: Colors.white),
+                onPressed: erroresPrevia.isNotEmpty ? null : () async {
+                  Navigator.of(ctx).pop();
+                  final messenger = ScaffoldMessenger.of(context);
+                  messenger.showSnackBar(
+                    const SnackBar(content: Text('Importando productos...'), backgroundColor: Colors.blue, duration: Duration(minutes: 1)),
+                  );
+
+                  final result = await productoService.importarProductosDesdeExcel(
+                    productos: parsed,
+                    categoriasExistentes: _categorias,
+                  );
+
+                  messenger.hideCurrentSnackBar();
+                  await _cargarDatos();
+
+                  if (!mounted) return;
+                  final importados = result['importados'] as int;
+                  final errores = result['errores'] as int;
+                  final msgs = result['mensajes'] as List<String>;
+                  showDialog<void>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Resultado'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('✓ $importados importados'),
+                          if (errores > 0) ...[
+                            const SizedBox(height: 8),
+                            Text('✗ $errores errores'),
+                            const SizedBox(height: 8),
+                            ...msgs.take(5).map((m) => Text(m, style: const TextStyle(fontSize: 12, color: Colors.red))),
+                            if (msgs.length > 5) Text('... y ${msgs.length - 5} más', style: const TextStyle(fontSize: 12)),
+                          ],
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: const Text('Importar'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

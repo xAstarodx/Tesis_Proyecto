@@ -371,5 +371,61 @@ class ProductoService {
     }
   }
 
+  Future<Map<String, dynamic>> importarProductosDesdeExcel({
+    required List<Map<String, dynamic>> productos,
+    required List<Map<String, dynamic>> categoriasExistentes,
+  }) async {
+    int importados = 0;
+    int errores = 0;
+    final List<String> mensajesError = [];
 
+    final catMap = <String, int>{};
+    for (final c in categoriasExistentes) {
+      catMap[(c['nombre_categoria'] as String).toLowerCase().trim()] =
+          c['categoria_id'] as int;
+    }
+
+    for (final p in productos) {
+      try {
+        final nombre = (p['nombre'] as String).trim();
+        final descripcion = (p['descripcion'] as String?)?.trim() ?? '';
+        final precio = double.parse(p['precio'].toString().replaceAll(',', '.'));
+        final stock = int.parse(p['stock'].toString());
+        final catNombre = (p['categoria'] as String).trim().toLowerCase();
+        final imagenUrl = p['imagen_url'] as String?;
+
+        int catId;
+        if (catMap.containsKey(catNombre)) {
+          catId = catMap[catNombre]!;
+        } else {
+          final newCat = await supabase
+              .from('categoria')
+              .insert({'nombre_categoria': p['categoria'].toString().trim()})
+              .select('categoria_id')
+              .single();
+          catId = newCat['categoria_id'] as int;
+          catMap[catNombre] = catId;
+        }
+
+        await supabase.from('productos').insert({
+          'nombre': nombre,
+          'descripcion': descripcion,
+          'precio': precio,
+          'stock': stock,
+          'categoria_id': catId,
+          if (imagenUrl != null && imagenUrl.isNotEmpty) 'imagen_url': imagenUrl,
+        });
+        importados++;
+      } catch (e) {
+        errores++;
+        mensajesError.add('${p['nombre'] ?? '?'}: $e');
+      }
+    }
+
+    return {
+      'importados': importados,
+      'errores': errores,
+      'mensajes': mensajesError,
+    };
+  }
 }
