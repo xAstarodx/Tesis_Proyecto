@@ -2930,6 +2930,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _descargarPlantillaExcel() async {
     try {
       final excel = Excel.createExcel();
+      excel.rename('Sheet1', 'Productos');
       final sheet = excel['Productos'];
 
       sheet.appendRow([
@@ -3291,6 +3292,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       final n = int.tryParse(v);
                       if (n == null) return 'Número inválido';
                       if (n < 0) return 'La cantidad no puede ser negativa';
+                      if (n < 5) return 'La cantidad mínima es 5';
                       return null;
                     },
                   ),
@@ -3521,6 +3523,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       final n = int.tryParse(v);
                       if (n == null) return 'Inválido';
                       if (n < 0) return 'La cantidad no puede ser negativa';
+                      if (n < 5) return 'La cantidad mínima es 5';
                       return null;
                     },
                   ),
