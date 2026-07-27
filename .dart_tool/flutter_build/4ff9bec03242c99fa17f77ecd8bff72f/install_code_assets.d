@@ -1,0 +1,1 @@
+ /workspaces/Tesis_Proyecto/.dart_tool/flutter_build/4ff9bec03242c99fa17f77ecd8bff72f/native_assets.json: 

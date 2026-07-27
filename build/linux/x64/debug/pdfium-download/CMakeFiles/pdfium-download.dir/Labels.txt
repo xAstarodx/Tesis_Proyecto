@@ -1,0 +1,14 @@
+# Target labels
+ pdfium-download
+# Source files and their labels
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/CMakeFiles/pdfium-download
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/CMakeFiles/pdfium-download.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/CMakeFiles/pdfium-download-complete.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-build.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-configure.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-download.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-install.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-mkdir.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-patch.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-test.rule
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/pdfium-download-prefix/src/pdfium-download-stamp/pdfium-download-update.rule

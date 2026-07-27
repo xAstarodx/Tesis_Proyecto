@@ -190,6 +190,29 @@ class ProductoService {
     }
   }
 
+  Future<bool> obtenerAutoTasaActiva() async {
+    try {
+      final res = await supabase
+          .from('tasa_dolar')
+          .select('valor')
+          .eq('clave', 'auto_tasa_activa')
+          .order('fecha_mod', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (res == null) return true;
+      return (res['valor'] as num).toInt() == 1;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  Future<void> establecerAutoTasa(bool activa) async {
+    await supabase.from('tasa_dolar').insert({
+      'clave': 'auto_tasa_activa',
+      'valor': activa ? 1 : 0,
+    });
+  }
+
   Future<void> _insertarRegistroPago({
     required int pedidoId,
     required double montoTotalUsd,
@@ -238,24 +261,29 @@ class ProductoService {
     await supabase.from('tasa_dolar').insert({
       'clave': 'tasa_usd_bs',
       'valor': nuevaTasa,
-      'fecha_mod': DateTime.now().toIso8601String(),
     });
   }
 
   Future<void> autoActualizarTasaCambio() async {
-    try {
-      final res = await http.get(Uri.parse('https://ve.dolarapi.com/v1/dolares/oficial'));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        final valor = (data['promedio'] as num).toDouble();
-        final existente = await obtenerTasaCambioInfo();
-        if (existente == null || (existente['valor'] as double) != valor) {
-          await actualizarTasaCambio(valor);
-          debugPrint('Tasa auto-actualizada: $valor Bs/USD');
+    final activa = await obtenerAutoTasaActiva();
+    if (!activa) return;
+    for (int intento = 0; intento < 2; intento++) {
+      try {
+        final res = await http.get(Uri.parse('https://ve.dolarapi.com/v1/dolares/oficial'));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as Map<String, dynamic>;
+          final valor = (data['promedio'] as num).toDouble();
+          final existente = await obtenerTasaCambioInfo();
+          if (existente == null || (existente['valor'] as double) != valor) {
+            await actualizarTasaCambio(valor);
+            debugPrint('Tasa auto-actualizada: $valor Bs/USD');
+          }
+          return;
         }
+      } catch (e) {
+        debugPrint('Intento $intento falló: $e');
+        if (intento == 0) await Future.delayed(const Duration(seconds: 3));
       }
-    } catch (e) {
-      debugPrint('Error auto-actualizando tasa: $e');
     }
   }
 

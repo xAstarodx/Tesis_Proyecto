@@ -1,0 +1,1 @@
+ /workspaces/Tesis_Proyecto/.dart_tool/flutter_build/4ff9bec03242c99fa17f77ecd8bff72f/dart_build_result.json:  /sdks/flutter/bin/cache/dart-sdk/version /workspaces/Tesis_Proyecto/.dart_tool/package_config.json /workspaces/Tesis_Proyecto/pubspec.yaml

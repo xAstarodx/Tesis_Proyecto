@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,7 +56,9 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   List<Map<String, dynamic>> _historialTasaCambio = [];
 
   double _tasaCambioValor = 1.0;
+  bool _autoTasaActiva = true;
   bool _estaCargando = true;
+  Timer? _timerTasa;
   final AudioPlayer _audioPlayer = AudioPlayer();
   RealtimeChannel? _pedidosRealtime;
 
@@ -70,6 +73,16 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     });
     _cargarDatos();
     _escucharPedidos();
+    _timerTasa = Timer.periodic(const Duration(minutes: 10), (_) async {
+      await productoService.autoActualizarTasaCambio();
+      final tasaInfo = await productoService.obtenerTasaCambioInfo();
+      if (mounted) {
+        setState(() {
+          _tasaCambioValor = (tasaInfo?['valor'] as num?)?.toDouble() ?? 1.0;
+          _controladorTasa.text = _tasaCambioValor.toStringAsFixed(2);
+        });
+      }
+    });
   }
 
   void _escucharPedidos() {
@@ -98,6 +111,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     _controladorTasa.dispose();
     _controladorBusquedaPedidos.dispose();
     _audioPlayer.dispose();
+    _timerTasa?.cancel();
     if (_pedidosRealtime != null) {
       Supabase.instance.client.removeChannel(_pedidosRealtime!);
     }
@@ -114,6 +128,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         productoService.obtenerPedidos(),
         productoService.obtenerCategorias(),
         productoService.obtenerHistorialTasaCambio(),
+        productoService.obtenerAutoTasaActiva(),
       ]);
 
       final productos = resultados[0] as List<Map<String, dynamic>>;
@@ -122,6 +137,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       final pedidos = resultados[2] as List<Map<String, dynamic>>;
       final categorias = resultados[3] as List<Map<String, dynamic>>;
       final historial = resultados[4] as List<Map<String, dynamic>>;
+      final autoTasa = resultados[5] as bool;
 
       setState(() {
         _todosLosProductos = productos;
@@ -129,6 +145,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         _categorias = categorias;
         _historialTasaCambio = historial;
         _tasaCambioValor = tasa;
+        _autoTasaActiva = autoTasa;
         _controladorTasa.text = _tasaCambioValor.toStringAsFixed(2);
       });
     } catch (e) {
@@ -1541,95 +1558,165 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 24),
-              Column(
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${_tasaCambioValor.toStringAsFixed(2)} bs = 1\$',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Text('Tasa del día',
+                        style: TextStyle(color: Colors.white70, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    Text('${_tasaCambioValor.toStringAsFixed(2)} Bs = 1 \$',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _autoTasaActiva
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _autoTasaActiva
+                                ? Icons.sync
+                                : Icons.edit,
+                            color: _autoTasaActiva
+                                ? Colors.greenAccent
+                                : Colors.orangeAccent,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _autoTasaActiva
+                                ? 'BCV automático'
+                                : 'Tasa manual',
+                            style: TextStyle(
+                              color: _autoTasaActiva
+                                  ? Colors.greenAccent
+                                  : Colors.orangeAccent,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '1\$',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controladorTasa,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d*[,.]?\d*'),
+              if (_autoTasaActiva)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.toggle_off_outlined),
+                  label: const Text('Cambiar a tasa manual'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    await productoService.establecerAutoTasa(false);
+                    await _cargarDatos();
+                  },
+                ),
+              if (!_autoTasaActiva)
+                Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controladorTasa,
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*[,.]?\d*')),
+                            ],
+                            decoration: const InputDecoration(
+                                labelText: 'Bs por 1\$'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            final double? valor = double.tryParse(
+                                _controladorTasa.text.replaceAll(',', '.'));
+                            if (valor != null && valor > 0) {
+                              try {
+                                await productoService
+                                    .actualizarTasaCambio(valor);
+                                await _cargarDatos();
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Tasa de cambio actualizada'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error al guardar: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Valor inválido'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              _controladorTasa.text =
+                                  _tasaCambioValor.toStringAsFixed(2);
+                            }
+                          },
+                          child: const Text('Actualizar'),
                         ),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'Bs por 1\$',
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.sync),
+                      label: const Text('Activar tasa BCV automática'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
                       ),
+                      onPressed: () async {
+                        await productoService.establecerAutoTasa(true);
+                        await productoService.autoActualizarTasaCambio();
+                        await _cargarDatos();
+                      },
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: () async {
-                      final double? valor = double.tryParse(
-                        _controladorTasa.text.replaceAll(',', '.'),
-                      );
-                      if (valor != null && valor > 0) {
-                        try {
-                          await productoService.actualizarTasaCambio(valor);
-                          await _cargarDatos();
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Tasa de cambio actualizada'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error al guardar: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Valor inválido'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        _controladorTasa.text = _tasaCambioValor
-                            .toStringAsFixed(2);
-                      }
-                    },
-                    child: const Text('Actualizar'),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               const SizedBox(height: 32),
               const Divider(),
               const SizedBox(height: 16),
@@ -1637,7 +1724,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Historial de cambios',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1652,7 +1740,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       itemCount: _historialTasaCambio.length,
                       itemBuilder: (context, index) {
                         final registro = _historialTasaCambio[index];
-                        final valor = (registro['valor'] as num).toDouble();
+                        final valor =
+                            (registro['valor'] as num).toDouble();
                         final fechaMod = registro['fecha_mod'] as String?;
                         DateTime? fecha;
                         if (fechaMod != null) {
@@ -1674,7 +1763,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           child: ListTile(
                             leading: Icon(
                               Icons.access_time,
-                              color: esPrimero ? Colors.blue : Colors.grey,
+                              color:
+                                  esPrimero ? Colors.blue : Colors.grey,
                             ),
                             title: Text(
                               '${valor.toStringAsFixed(2)} bs = 1\$',

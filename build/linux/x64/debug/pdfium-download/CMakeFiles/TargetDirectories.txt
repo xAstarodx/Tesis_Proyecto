@@ -1,0 +1,3 @@
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/CMakeFiles/pdfium-download.dir
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/CMakeFiles/edit_cache.dir
+/workspaces/Tesis_Proyecto/build/linux/x64/debug/pdfium-download/CMakeFiles/rebuild_cache.dir
