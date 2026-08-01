@@ -34,7 +34,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   DateTime? _fechaFinReporte;
 
   static const List<String> _titulos = [
-    'Dashboard',
+    'Resumen General',
     'Productos',
     'Pedidos',
     'Pagados',
@@ -1090,221 +1090,322 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
     final int maxVentas = masVendidos.isNotEmpty ? masVendidos.first.value : 1;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: AppTheme.primaryGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.dashboard_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Dashboard',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Resumen general de ventas y productos',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
+    final ahora = DateTime.now();
+    final String saludo = ahora.hour < 12
+        ? 'Buenos días'
+        : (ahora.hour < 19 ? 'Buenas tardes' : 'Buenas noches');
+    const List<String> nombresMeses = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+    final String fechaLegible =
+        '${ahora.day} de ${nombresMeses[ahora.month - 1]} de ${ahora.year}';
 
-          LayoutBuilder(
-            builder: (context, constraints) {
-              int crossCount = 2;
-              double aspectRatio = 1.6;
-              if (constraints.maxWidth > 1100) {
-                crossCount = 4;
-                aspectRatio = 2.2;
-              } else if (constraints.maxWidth > 700) {
-                crossCount = 4;
-                aspectRatio = 1.6;
-              } else if (constraints.maxWidth > 400) {
-                crossCount = 2;
-                aspectRatio = 1.8;
-              } else {
-                crossCount = 1;
-                aspectRatio = 2.5;
-              }
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: aspectRatio,
-                children: [
-                  _tarjetaResumen(
-                    'Total Pedidos',
-                    '$totalPedidos',
-                    Icons.receipt_long_rounded,
-                    AppTheme.primaryColor,
-                  ),
-                  _tarjetaResumen(
-                    'Pendientes',
-                    '$pedidosPendientes',
-                    Icons.hourglass_empty_rounded,
-                    AppTheme.warningColor,
-                  ),
-                  _tarjetaResumen(
-                    'Completados',
-                    '$pedidosCompletados',
-                    Icons.check_circle_rounded,
-                    AppTheme.successColor,
-                  ),
-                  _tarjetaResumen(
-                    'Productos',
-                    '$totalProductos',
-                    Icons.store_rounded,
-                    AppTheme.accentColor,
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
+    return RefreshIndicator(
+      onRefresh: _cargarDatos,
+      color: AppTheme.primaryColor,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _construirEncabezadoResumen(saludo, fechaLegible),
+            const SizedBox(height: 22),
 
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final bool esAncho = constraints.maxWidth > 900;
-              if (esAncho) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                int crossCount = 2;
+                double aspectRatio = 1.15;
+                if (constraints.maxWidth > 1100) {
+                  crossCount = 4;
+                  aspectRatio = 1.35;
+                } else if (constraints.maxWidth > 700) {
+                  crossCount = 4;
+                  aspectRatio = 1.05;
+                } else if (constraints.maxWidth > 420) {
+                  crossCount = 2;
+                  aspectRatio = 1.3;
+                } else {
+                  crossCount = 2;
+                  aspectRatio = 1.05;
+                }
+                return GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: crossCount,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: aspectRatio,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _seccionTitulo(
-                            '🏆 Productos más vendidos',
-                            AppTheme.successColor,
-                          ),
-                          const SizedBox(height: 12),
-                          _listaProductosMasVendidos(masVendidos, maxVentas),
-                        ],
-                      ),
+                    _tarjetaResumen(
+                      'Total Pedidos',
+                      '$totalPedidos',
+                      Icons.receipt_long_rounded,
+                      AppTheme.primaryColor,
                     ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _seccionTitulo(
-                            '📉 Productos menos vendidos',
-                            AppTheme.warningColor,
-                          ),
-                          const SizedBox(height: 12),
-                          _listaProductosMenosVendidos(
-                            menosVendidos,
-                            maxVentas,
-                          ),
-                        ],
-                      ),
+                    _tarjetaResumen(
+                      'Pendientes',
+                      '$pedidosPendientes',
+                      Icons.hourglass_empty_rounded,
+                      AppTheme.warningColor,
+                    ),
+                    _tarjetaResumen(
+                      'Completados',
+                      '$pedidosCompletados',
+                      Icons.check_circle_rounded,
+                      AppTheme.successColor,
+                    ),
+                    _tarjetaResumen(
+                      'Productos',
+                      '$totalProductos',
+                      Icons.store_rounded,
+                      AppTheme.accentColor,
                     ),
                   ],
                 );
-              } else {
+              },
+            ),
+            const SizedBox(height: 26),
+
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final bool esAncho = constraints.maxWidth > 900;
+                final ranking1 = _tarjetaRanking(
+                  titulo: 'Productos más vendidos',
+                  icono: Icons.emoji_events_rounded,
+                  color: AppTheme.successColor,
+                  contenido: _listaProductosMasVendidos(masVendidos, maxVentas),
+                );
+                final ranking2 = _tarjetaRanking(
+                  titulo: 'Productos menos vendidos',
+                  icono: Icons.trending_down_rounded,
+                  color: AppTheme.warningColor,
+                  contenido: _listaProductosMenosVendidos(menosVendidos, maxVentas),
+                );
+                if (esAncho) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: ranking1),
+                      const SizedBox(width: 18),
+                      Expanded(child: ranking2),
+                    ],
+                  );
+                }
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _seccionTitulo(
-                      '🏆 Productos más vendidos',
-                      AppTheme.successColor,
-                    ),
-                    const SizedBox(height: 12),
-                    _listaProductosMasVendidos(masVendidos, maxVentas),
-                    const SizedBox(height: 24),
-                    _seccionTitulo(
-                      '📉 Productos menos vendidos',
-                      AppTheme.warningColor,
-                    ),
-                    const SizedBox(height: 12),
-                    _listaProductosMenosVendidos(menosVendidos, maxVentas),
+                    ranking1,
+                    const SizedBox(height: 18),
+                    ranking2,
                   ],
                 );
-              }
-            },
-          ),
+              },
+            ),
 
-          if (sinVentas.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _seccionTitulo('⚠️ Sin ventas registradas', AppTheme.errorColor),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: sinVentas.map((p) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppTheme.errorColor.withValues(alpha: 0.3),
+            if (sinVentas.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.18)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.remove_shopping_cart_rounded,
-                        size: 16,
-                        color: AppTheme.errorColor.withValues(alpha: 0.7),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _seccionTitulo(
+                            'Sin ventas registradas',
+                            Icons.remove_shopping_cart_rounded,
+                            AppTheme.errorColor,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${sinVentas.length}',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.errorColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Estos productos aún no registran pedidos. Toca una foto para verla en grande.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppTheme.textSecondary.withValues(alpha: 0.9),
                       ),
-                      const SizedBox(width: 6),
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: sinVentas
+                          .map((p) => _tarjetaProductoSinVentas(p))
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _construirEncabezadoResumen(String saludo, String fechaLegible) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              right: -30,
+              top: -40,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 40,
+              bottom: -50,
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06),
+                ),
+              ),
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.space_dashboard_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        p['nombre'] ?? 'Sin nombre',
+                        '$saludo 👋',
                         style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 13,
-                          color: AppTheme.errorColor.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Resumen General',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Cafetín ISABORES · $fechaLegible',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 13,
                         ),
                       ),
                     ],
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
           ],
-          const SizedBox(height: 24),
+        ),
+      ),
+    );
+  }
+
+  Widget _tarjetaRanking({
+    required String titulo,
+    required IconData icono,
+    required Color color,
+    required Widget contenido,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _seccionTitulo(titulo, icono, color),
+          const SizedBox(height: 14),
+          contenido,
         ],
       ),
     );
@@ -1364,70 +1465,116 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     Color color,
   ) {
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [Colors.white, color.withValues(alpha: 0.07)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: color.withValues(alpha: 0.14),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          Icon(icono, color: color, size: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                valor,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+          // Icono decorativo de marca de agua
+          Positioned(
+            right: -16,
+            bottom: -16,
+            child: Icon(
+              icono,
+              size: 78,
+              color: color.withValues(alpha: 0.08),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withValues(alpha: 0.72)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(icono, color: Colors.white, size: 22),
                 ),
-              ),
-              Text(
-                titulo,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w500,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      valor,
+                      style: TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                        height: 1.05,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      titulo,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _seccionTitulo(String titulo, Color color) {
+  Widget _seccionTitulo(String titulo, IconData icono, Color color) {
     return Row(
       children: [
         Container(
-          width: 4,
-          height: 20,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icono, size: 18, color: color),
         ),
         const SizedBox(width: 10),
-        Text(
-          titulo,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
+        Expanded(
+          child: Text(
+            titulo,
+            style: const TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
           ),
         ),
       ],
@@ -1437,12 +1584,263 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Widget _mensajeVacio(String mensaje) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          mensaje,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            Icon(
+              Icons.inbox_rounded,
+              size: 32,
+              color: AppTheme.textSecondary.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              mensaje,
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  /// Tarjeta compacta con foto para un producto que aún no registra ventas.
+  /// Al tocar la foto se abre la vista ampliada con zoom.
+  Widget _tarjetaProductoSinVentas(Map<String, dynamic> producto) {
+    final String? imagenUrl = producto['imagen_url'] as String?;
+    final String nombre = producto['nombre'] ?? 'Sin nombre';
+    final int stock = (producto['stock'] as num?)?.toInt() ?? 0;
+    final String heroTag =
+        'sin_ventas_${producto['producto_id'] ?? nombre}';
+
+    return SizedBox(
+      width: 132,
+      child: GestureDetector(
+        onTap: imagenUrl != null
+            ? () => _ampliarImagenProducto(imagenUrl, nombre, heroTag)
+            : null,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.errorColor.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.errorColor.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Hero(
+                tag: heroTag,
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: double.infinity,
+                        height: 80,
+                        color: Colors.white,
+                        child: imagenUrl != null
+                            ? Image.network(
+                                imagenUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.restaurant_menu,
+                                  color: AppTheme.errorColor.withValues(alpha: 0.4),
+                                ),
+                              )
+                            : Icon(
+                                Icons.restaurant_menu,
+                                color: AppTheme.errorColor.withValues(alpha: 0.4),
+                              ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.all(3.5),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.remove_shopping_cart_rounded,
+                          size: 11,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (imagenUrl != null)
+                      Positioned(
+                        bottom: 5,
+                        right: 5,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.zoom_in_rounded,
+                            size: 12,
+                            color: AppTheme.errorColor,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                nombre,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    stock > 0 ? Icons.inventory_2_outlined : Icons.error_outline,
+                    size: 12,
+                    color: stock > 0
+                        ? AppTheme.textSecondary
+                        : AppTheme.errorColor,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    'Stock: $stock',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: stock > 0
+                          ? AppTheme.textSecondary
+                          : AppTheme.errorColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Busca la URL de la imagen de un producto por su nombre, consultando
+  /// la lista completa de productos cargados desde Supabase.
+  String? _obtenerImagenProductoPorNombre(String nombre) {
+    for (final producto in _todosLosProductos) {
+      if (producto['nombre'] == nombre) {
+        return producto['imagen_url'] as String?;
+      }
+    }
+    return null;
+  }
+
+  /// Muestra la imagen del producto ampliada en un diálogo, con zoom
+  /// interactivo (pellizcar para acercar) y una transición Hero fluida.
+  void _ampliarImagenProducto(String? url, String nombre, String heroTag) {
+    if (url == null || url.isEmpty) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Hero(
+                      tag: heroTag,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.85,
+                            maxHeight: MediaQuery.of(context).size.height * 0.65,
+                          ),
+                          child: InteractiveViewer(
+                            minScale: 0.9,
+                            maxScale: 4,
+                            child: Image.network(
+                              url,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 260,
+                                height: 260,
+                                color: Colors.white,
+                                alignment: Alignment.center,
+                                child: const Icon(
+                                  Icons.restaurant_menu,
+                                  size: 60,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        nombre,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1454,93 +1852,170 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     required Color color,
     required bool esMasVendido,
   }) {
+    final String? imagenUrl = _obtenerImagenProductoPorNombre(nombre);
+    final String heroTag =
+        'ranking_${esMasVendido ? 'top' : 'low'}_${nombre}_${rank ?? cantidad}';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppTheme.backgroundColor.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              if (rank != null) ...[
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: rank == 1
-                        ? const Color(0xFFFFD700)
-                        : rank == 2
-                        ? const Color(0xFFC0C0C0)
-                        : rank == 3
-                        ? const Color(0xFFCD7F32)
-                        : color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '#$rank',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: rank <= 3 ? Colors.white : color,
-                      ),
+          GestureDetector(
+            onTap: imagenUrl != null
+                ? () => _ampliarImagenProducto(imagenUrl, nombre, heroTag)
+                : null,
+            child: Hero(
+              tag: heroTag,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(13),
+                      color: Colors.white,
+                      border: Border.all(color: color.withValues(alpha: 0.25)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: imagenUrl != null
+                          ? Image.network(
+                              imagenUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.restaurant_menu,
+                                color: color.withValues(alpha: 0.5),
+                              ),
+                            )
+                          : Icon(
+                              Icons.restaurant_menu,
+                              color: color.withValues(alpha: 0.5),
+                            ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Text(
-                  nombre,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  if (rank != null)
+                    Positioned(
+                      top: -6,
+                      left: -6,
+                      child: Container(
+                        width: 21,
+                        height: 21,
+                        decoration: BoxDecoration(
+                          color: rank == 1
+                              ? const Color(0xFFFFD700)
+                              : rank == 2
+                              ? const Color(0xFFC0C0C0)
+                              : rank == 3
+                              ? const Color(0xFFCD7F32)
+                              : color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$rank',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (imagenUrl != null)
+                    Positioned(
+                      bottom: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.zoom_in_rounded,
+                          size: 12,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$cantidad uds',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: porcentaje.clamp(0.0, 1.0),
-              backgroundColor: color.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 6,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        nombre,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$cantidad uds',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: porcentaje.clamp(0.0, 1.0),
+                    backgroundColor: color.withValues(alpha: 0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                    minHeight: 6,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
