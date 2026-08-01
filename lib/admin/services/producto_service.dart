@@ -119,10 +119,59 @@ class ProductoService {
 
   Future<List<Map<String, dynamic>>> obtenerCategorias() async {
     try {
-      final data = await supabase.from('categoria').select();
+      final data = await supabase
+          .from('categoria')
+          .select()
+          .order('nombre_categoria', ascending: true);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       throw Exception('Error al obtener categorías: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> crearCategoria(String nombreCategoria) async {
+    final nombre = nombreCategoria.trim();
+    if (nombre.isEmpty) {
+      throw Exception('El nombre de la categoría no puede estar vacío');
+    }
+    if (nombre.length > 50) {
+      throw Exception('El nombre de la categoría es demasiado largo (máx. 50)');
+    }
+    try {
+      final existentes = await supabase.from('categoria').select('nombre_categoria');
+      final duplicado = List<Map<String, dynamic>>.from(existentes).any(
+        (c) => (c['nombre_categoria'] as String).trim().toLowerCase() ==
+            nombre.toLowerCase(),
+      );
+      if (duplicado) {
+        throw Exception('Ya existe una categoría con ese nombre');
+      }
+      final nuevo = await supabase
+          .from('categoria')
+          .insert({'nombre_categoria': nombre})
+          .select()
+          .single();
+      return Map<String, dynamic>.from(nuevo);
+    } catch (e) {
+      throw Exception(
+        'Error al crear categoría: ${e.toString().replaceFirst('Exception: ', '')}',
+      );
+    }
+  }
+
+  Future<void> eliminarCategoria(int categoriaId) async {
+    try {
+      final enUso = await supabase
+          .from('productos')
+          .select('producto_id')
+          .eq('categoria_id', categoriaId)
+          .limit(1);
+      if (List.from(enUso).isNotEmpty) {
+        throw Exception('No se puede eliminar: hay productos usando esta categoría');
+      }
+      await supabase.from('categoria').delete().eq('categoria_id', categoriaId);
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 

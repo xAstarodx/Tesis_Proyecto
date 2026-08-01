@@ -3204,6 +3204,18 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _mostrarDialogoGestionarCategorias,
+                      icon: const Icon(Icons.category_outlined),
+                      label: const Text('Categorías'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 44),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
@@ -3240,6 +3252,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           onPressed: _mostrarDialogoImportarExcel,
                           icon: const Icon(Icons.file_upload_outlined),
                           label: const Text('Subir Excel'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _mostrarDialogoGestionarCategorias,
+                          icon: const Icon(Icons.category_outlined),
+                          label: const Text('Categorías'),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 50),
                             shape: RoundedRectangleBorder(
@@ -3737,6 +3763,332 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
+  Future<void> _agregarCategoriaDesdeDialogo(
+    BuildContext dialogContext,
+    void Function(void Function()) setStateDialog,
+    void Function(int nuevaCategoriaId) onCategoriaCreada,
+  ) async {
+    final controlador = TextEditingController();
+    final formKeyCat = GlobalKey<FormState>();
+
+    final nombre = await showDialog<String>(
+      context: dialogContext,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nueva categoría'),
+        content: Form(
+          key: formKeyCat,
+          child: TextFormField(
+            controller: controlador,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(labelText: 'Nombre de la categoría'),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'El nombre es obligatorio';
+              if (v.trim().length > 50) return 'Máximo 50 caracteres';
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKeyCat.currentState?.validate() ?? false) {
+                Navigator.of(ctx).pop(controlador.text.trim());
+              }
+            },
+            child: const Text('Crear'),
+          ),
+        ],
+      ),
+    );
+
+    if (nombre == null || nombre.isEmpty) return;
+
+    try {
+      final nueva = await productoService.crearCategoria(nombre);
+      await _cargarDatos();
+      setStateDialog(() {});
+      onCategoriaCreada(nueva['categoria_id'] as int);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Categoría "$nombre" creada'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _mostrarDialogoGestionarCategorias() {
+    final controlador = TextEditingController();
+    final formKeyCat = GlobalKey<FormState>();
+    bool guardando = false;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          final tamano = MediaQuery.of(context).size;
+          final anchoDialogo = tamano.width < 480
+              ? tamano.width * 0.9
+              : 400.0;
+          final anchoAngosto = tamano.width < 360;
+          final altoLista = (tamano.height * 0.35).clamp(150.0, 300.0);
+
+          return AlertDialog(
+          insetPadding: const EdgeInsets.all(16),
+          title: const Text('Gestionar categorías'),
+          content: SizedBox(
+            width: anchoDialogo,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                Form(
+                  key: formKeyCat,
+                  child: anchoAngosto
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextFormField(
+                              controller: controlador,
+                              decoration: const InputDecoration(
+                                labelText: 'Nueva categoría',
+                                border: OutlineInputBorder(),
+                              ),
+                              textCapitalization: TextCapitalization.sentences,
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Obligatorio';
+                                }
+                                if (v.trim().length > 50) return 'Máx. 50';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton(
+                              onPressed: guardando
+                                  ? null
+                                  : () async {
+                                      if (!(formKeyCat.currentState
+                                              ?.validate() ??
+                                          false)) {
+                                        return;
+                                      }
+                                      setStateDialog(() => guardando = true);
+                                      try {
+                                        await productoService.crearCategoria(
+                                          controlador.text,
+                                        );
+                                        controlador.clear();
+                                        await _cargarDatos();
+                                        setStateDialog(() {});
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('$e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        setStateDialog(() => guardando = false);
+                                      }
+                                    },
+                              child: guardando
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Añadir'),
+                            ),
+                          ],
+                        )
+                      : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controlador,
+                          decoration: const InputDecoration(
+                            labelText: 'Nueva categoría',
+                            border: OutlineInputBorder(),
+                          ),
+                          textCapitalization: TextCapitalization.sentences,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Obligatorio';
+                            }
+                            if (v.trim().length > 50) return 'Máx. 50';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: guardando
+                            ? null
+                            : () async {
+                                if (!(formKeyCat.currentState?.validate() ??
+                                    false)) {
+                                  return;
+                                }
+                                setStateDialog(() => guardando = true);
+                                try {
+                                  await productoService.crearCategoria(
+                                    controlador.text,
+                                  );
+                                  controlador.clear();
+                                  await _cargarDatos();
+                                  setStateDialog(() {});
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('$e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  setStateDialog(() => guardando = false);
+                                }
+                              },
+                        child: guardando
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Añadir'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: altoLista,
+                  width: double.infinity,
+                  child: _categorias.isEmpty
+                      ? const Center(child: Text('No hay categorías'))
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _categorias.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final cat = _categorias[index];
+                            final nombreCat =
+                                (cat['nombre_categoria'] as String?) ??
+                                    'Sin nombre';
+                            final catId = cat['categoria_id'] as int;
+                            return ListTile(
+                              title: Text(nombreCat),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
+                                tooltip: 'Eliminar categoría',
+                                onPressed: () async {
+                                  final confirmar = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Eliminar categoría'),
+                                      content: Text(
+                                        '¿Eliminar la categoría "$nombreCat"?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Eliminar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmar != true) return;
+                                  try {
+                                    await productoService.eliminarCategoria(
+                                      catId,
+                                    );
+                                    await _cargarDatos();
+                                    setStateDialog(() {});
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Categoría "$nombreCat" eliminada',
+                                          ),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text('$e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ],
+          );
+        },
+      ),
+    );
+  }
+
   void _mostrarDialogoAgregarProducto() {
     final controladorNombre = TextEditingController();
     final controladorDescripcion = TextEditingController();
@@ -3757,38 +4109,56 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _categorias.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: Text(
-                            'No se encontraron categorías. Por favor, añada categorías en la base de datos para poder crear productos.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.redAccent),
-                          ),
-                        )
-                      : DropdownButtonFormField<int>(
-                          initialValue: categoriaSeleccionadaId,
-                          hint: const Text('Seleccionar Categoría'),
-                          items: _categorias.map((cat) {
-                            return DropdownMenuItem<int>(
-                              value: cat['categoria_id'] as int,
-                              child: Text(
-                                (cat['nombre_categoria'] as String?) ??
-                                    'Sin Etiqueta',
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _categorias.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16.0),
+                                child: Text(
+                                  'No hay categorías. Cree una con el botón +.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.redAccent),
+                                ),
+                              )
+                            : DropdownButtonFormField<int>(
+                                initialValue: categoriaSeleccionadaId,
+                                hint: const Text('Seleccionar Categoría'),
+                                items: _categorias.map((cat) {
+                                  return DropdownMenuItem<int>(
+                                    value: cat['categoria_id'] as int,
+                                    child: Text(
+                                      (cat['nombre_categoria'] as String?) ??
+                                          'Sin Etiqueta',
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setStateDialog(() {
+                                    categoriaSeleccionadaId = value;
+                                  });
+                                },
+                                validator: (value) => value == null
+                                    ? 'Seleccione una categoría'
+                                    : null,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                ),
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setStateDialog(() {
-                              categoriaSeleccionadaId = value;
-                            });
-                          },
-                          validator: (value) =>
-                              value == null ? 'Seleccione una categoría' : null,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                          ),
+                      ),
+                      IconButton(
+                        tooltip: 'Nueva categoría',
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: () => _agregarCategoriaDesdeDialogo(
+                          context,
+                          setStateDialog,
+                          (id) =>
+                              setStateDialog(() => categoriaSeleccionadaId = id),
                         ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   GestureDetector(
                     onTap: () async {
