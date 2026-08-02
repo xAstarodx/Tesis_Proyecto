@@ -3763,73 +3763,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  Future<void> _agregarCategoriaDesdeDialogo(
-    BuildContext dialogContext,
-    void Function(void Function()) setStateDialog,
-    void Function(int nuevaCategoriaId) onCategoriaCreada,
-  ) async {
-    final controlador = TextEditingController();
-    final formKeyCat = GlobalKey<FormState>();
-
-    final nombre = await showDialog<String>(
-      context: dialogContext,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nueva categoría'),
-        content: Form(
-          key: formKeyCat,
-          child: TextFormField(
-            controller: controlador,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(labelText: 'Nombre de la categoría'),
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'El nombre es obligatorio';
-              if (v.trim().length > 50) return 'Máximo 50 caracteres';
-              return null;
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKeyCat.currentState?.validate() ?? false) {
-                Navigator.of(ctx).pop(controlador.text.trim());
-              }
-            },
-            child: const Text('Crear'),
-          ),
-        ],
-      ),
-    );
-
-    if (nombre == null || nombre.isEmpty) return;
-
-    try {
-      final nueva = await productoService.crearCategoria(nombre);
-      await _cargarDatos();
-      setStateDialog(() {});
-      onCategoriaCreada(nueva['categoria_id'] as int);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Categoría "$nombre" creada'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
   void _mostrarDialogoGestionarCategorias() {
     final controlador = TextEditingController();
     final formKeyCat = GlobalKey<FormState>();
@@ -4109,56 +4042,38 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _categorias.isEmpty
-                            ? const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16.0),
-                                child: Text(
-                                  'No hay categorías. Cree una con el botón +.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.redAccent),
-                                ),
-                              )
-                            : DropdownButtonFormField<int>(
-                                initialValue: categoriaSeleccionadaId,
-                                hint: const Text('Seleccionar Categoría'),
-                                items: _categorias.map((cat) {
-                                  return DropdownMenuItem<int>(
-                                    value: cat['categoria_id'] as int,
-                                    child: Text(
-                                      (cat['nombre_categoria'] as String?) ??
-                                          'Sin Etiqueta',
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setStateDialog(() {
-                                    categoriaSeleccionadaId = value;
-                                  });
-                                },
-                                validator: (value) => value == null
-                                    ? 'Seleccione una categoría'
-                                    : null,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                ),
+                  _categorias.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Text(
+                            'No hay categorías. Cree una desde "Categorías" en la pantalla de productos.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.redAccent),
+                          ),
+                        )
+                      : DropdownButtonFormField<int>(
+                          initialValue: categoriaSeleccionadaId,
+                          hint: const Text('Seleccionar Categoría'),
+                          items: _categorias.map((cat) {
+                            return DropdownMenuItem<int>(
+                              value: cat['categoria_id'] as int,
+                              child: Text(
+                                (cat['nombre_categoria'] as String?) ??
+                                    'Sin Etiqueta',
                               ),
-                      ),
-                      IconButton(
-                        tooltip: 'Nueva categoría',
-                        icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () => _agregarCategoriaDesdeDialogo(
-                          context,
-                          setStateDialog,
-                          (id) =>
-                              setStateDialog(() => categoriaSeleccionadaId = id),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setStateDialog(() {
+                              categoriaSeleccionadaId = value;
+                            });
+                          },
+                          validator: (value) =>
+                              value == null ? 'Seleccione una categoría' : null,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 16),
                   GestureDetector(
                     onTap: () async {
