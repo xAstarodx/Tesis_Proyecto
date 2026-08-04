@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 class DetalleItem extends StatefulWidget {
   final Map<String, dynamic> item;
   final VoidCallback? onAdd;
+
   const DetalleItem({super.key, required this.item, this.onAdd});
 
   @override
@@ -25,7 +26,9 @@ class _DetalleItemState extends State<DetalleItem> {
     final int stockDisponible = widget.item['stock'] ?? 0;
 
     final itemsEnCarrito = CartModel.items.value;
-    final index = itemsEnCarrito.indexWhere((it) => it['producto_id'] == widget.item['producto_id']);
+    final index = itemsEnCarrito.indexWhere(
+      (it) => it['producto_id'] == widget.item['producto_id'],
+    );
 
     int cantidadEnCarrito = 0;
     if (index != -1) {
@@ -35,7 +38,10 @@ class _DetalleItemState extends State<DetalleItem> {
     if (cantidadEnCarrito + _cantidad > stockDisponible) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No hay suficiente stock. Disponible: $stockDisponible (Ya tienes $cantidadEnCarrito en el carrito)'),
+          content: Text(
+            'No hay suficiente stock. Disponible: $stockDisponible '
+            '(Ya tienes $cantidadEnCarrito en el carrito)',
+          ),
           backgroundColor: AppTheme.errorColor,
         ),
       );
@@ -43,8 +49,10 @@ class _DetalleItemState extends State<DetalleItem> {
       final mapa = Map<String, dynamic>.from(widget.item);
       mapa['cantidad'] = _cantidad;
       mapa['mensaje'] = _controladorNota.text.trim();
+
       CartModel.add(mapa);
       Navigator.pop(context);
+
       if (widget.onAdd != null) widget.onAdd!();
     }
   }
@@ -77,19 +85,32 @@ class _DetalleItemState extends State<DetalleItem> {
           20 + MediaQuery.of(context).viewInsets.bottom,
         ),
         children: [
-
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.dividerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
+          SizedBox(
+            height: 40,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _BotonCerrar(
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
-
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -181,7 +202,9 @@ class _DetalleItemState extends State<DetalleItem> {
                       'Disponible: $stockDisponible',
                       style: TextStyle(
                         fontSize: 13,
-                        color: stockDisponible < 5 ? AppTheme.errorColor : AppTheme.successColor,
+                        color: stockDisponible < 5
+                            ? AppTheme.errorColor
+                            : AppTheme.successColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -191,7 +214,6 @@ class _DetalleItemState extends State<DetalleItem> {
             ],
           ),
           const SizedBox(height: 16),
-
           if (item['descripcion'] != null &&
               item['descripcion'].toString().isNotEmpty) ...[
             Text('Descripción', style: Theme.of(context).textTheme.titleMedium),
@@ -202,7 +224,6 @@ class _DetalleItemState extends State<DetalleItem> {
             ),
             const SizedBox(height: 20),
           ],
-
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -290,7 +311,6 @@ class _DetalleItemState extends State<DetalleItem> {
             ),
           ),
           const SizedBox(height: 16),
-
           TextField(
             controller: _controladorNota,
             decoration: const InputDecoration(
@@ -305,31 +325,99 @@ class _DetalleItemState extends State<DetalleItem> {
             maxLines: 3,
           ),
           const SizedBox(height: 20),
-
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                  label: const Text('Cancelar'),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _agregar,
+              icon: const Icon(Icons.add_shopping_cart_rounded, size: 20),
+              label: Text(
+                'Agregar - \$${precioTotal.toStringAsFixed(2)}',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: _agregar,
-                  icon: const Icon(Icons.add_shopping_cart),
-                  label: Text('Agregar - \$${precioTotal.toStringAsFixed(2)}'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentColor,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BotonCerrar extends StatefulWidget {
+  final VoidCallback onPressed;
+
+  const _BotonCerrar({required this.onPressed});
+
+  @override
+  State<_BotonCerrar> createState() => _BotonCerrarState();
+}
+
+class _BotonCerrarState extends State<_BotonCerrar> {
+  bool _activo = false;
+
+  void _setActivo(bool valor) {
+    if (mounted && _activo != valor) {
+      setState(() => _activo = valor);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Cerrar',
+      child: Tooltip(
+        message: 'Cerrar',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => _setActivo(true),
+          onTapCancel: () => _setActivo(false),
+          onTapUp: (_) {
+            _setActivo(false);
+            widget.onPressed();
+          },
+          child: AnimatedScale(
+            scale: _activo ? 0.92 : 1.0,
+            duration: const Duration(milliseconds: 130),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: _activo
+                    ? AppTheme.errorColor.withValues(alpha: 0.16)
+                    : AppTheme.errorColor.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppTheme.errorColor.withValues(
+                    alpha: _activo ? 0.35 : 0.18,
+                  ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.close_rounded,
+                size: 20,
+                color: AppTheme.errorColor,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

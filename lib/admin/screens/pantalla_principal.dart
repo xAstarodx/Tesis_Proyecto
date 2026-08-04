@@ -380,309 +380,453 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       }
     }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Pedido #${pedido['pedido_id']}'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Cliente: $cliente',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text('Correo: $correo'),
-              Text('Fecha: $fecha'),
-              Text(
-                'Hora Recogida: $horaRecogida',
-                style: const TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text('Forma de Pago: $formaPago'),
-              const Divider(),
-              if (notaGeneral != null && notaGeneral.toString().isNotEmpty) ...[
-                const Text(
-                  'MENSAJE DEL CLIENTE:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepOrange,
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Text(
-                    notaGeneral.toString(),
-                    style: const TextStyle(fontStyle: FontStyle.italic),
-                  ),
-                ),
-                const Divider(),
-              ],
-              if (referencia != null || comprobanteUrl != null) ...[
-                const Text(
-                  'Datos de Pago del Usuario:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey,
-                  ),
-                ),
-                if (referencia != null) Text('Referencia: $referencia'),
-                if (comprobanteUrl != null) ...[
-                  const SizedBox(height: 8),
-                  const Text('Comprobante:'),
-                  const SizedBox(height: 4),
-                  Builder(
-                    builder: (ctx) {
-                      final url = comprobanteUrl is String
-                          ? comprobanteUrl
-                          : null;
-                      return url != null
-                          ? GestureDetector(
-                              onTap: () {
-                                showDialog(
-                                  context: ctx,
-                                  builder: (_) =>
-                                      Dialog(child: Image.network(url)),
-                                );
-                              },
-                              child: SizedBox(
-                                height: 150,
-                                child: Image.network(url, fit: BoxFit.cover),
-                              ),
-                            )
-                          : const SizedBox.shrink();
-                    },
-                  ),
-                ],
-                const Divider(),
-              ],
-              const Text(
-                'Productos:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ...detalles.map((d) {
-                final prod = d['productos'];
-                final cantidad = d['cantidad'] as num? ?? 0;
-                final precio = d['precio_unitario'] as num? ?? 0;
-                final subtotal = cantidad * precio;
-                final desc =
-                    d['Descripcion'] != null &&
-                        d['Descripcion'].toString().isNotEmpty
-                    ? '\nNota: ${d['Descripcion']}'
-                    : '';
+    // Metadata de cada estado posible: id, etiqueta, ícono y color.
+    final estados = <Map<String, dynamic>>[
+      {
+        'id': 2,
+        'label': 'Proceso',
+        'icon': Icons.check_circle_outline,
+        'color': Colors.orange,
+      },
+      {
+        'id': 8,
+        'label': 'Listo',
+        'icon': Icons.alarm_on,
+        'color': Colors.teal,
+      },
+      {
+        'id': 6,
+        'label': 'Entregado y Pagado',
+        'icon': Icons.handshake,
+        'color': Colors.green,
+      },
+      {
+        'id': 3,
+        'label': 'Cancelar',
+        'icon': Icons.cancel_outlined,
+        'color': Colors.red,
+      },
+      {
+        'id': 4,
+        'label': 'Pagado',
+        'icon': Icons.payment,
+        'color': Colors.blue,
+      },
+    ];
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${prod?['nombre'] ?? 'Producto'} (x$cantidad)'),
-                      Text(
-                        'Precio: \$${precio.toStringAsFixed(2)} - Subtotal: \$${subtotal.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                      ),
-                      if (desc.isNotEmpty)
-                        Text(
-                          desc.trim(),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }),
-              const Divider(),
-              Text(
-                'Total USD: \$${totalUsd.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+    Future<void> cambiarEstado(BuildContext ctx, int nuevoEstadoId) async {
+      try {
+        await productoService.actualizarEstadoPedido(
+          pedido['pedido_id'],
+          nuevoEstadoId,
+        );
+        if (ctx.mounted) Navigator.of(ctx).pop();
+        _cargarDatos();
+      } catch (e) {
+        if (!ctx.mounted) return;
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+
+    Widget filaInfo(IconData icono, String texto, {Color? color}) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icono, size: 18, color: color ?? AppTheme.textSecondary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                texto,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: color ?? AppTheme.textPrimary,
+                  fontWeight: color != null
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
               ),
-              Text(
-                'Total Bs: Bs ${(totalUsd * tasaParaCalculo).toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.blue,
-                ),
-              ),
-              const Divider(),
-              const Text(
-                'Cambiar Estado:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.spaceEvenly,
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Proceso'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: pedido['estado_id'] == 2
-                        ? null
-                        : () async {
-                            try {
-                              await productoService.actualizarEstadoPedido(
-                                pedido['pedido_id'],
-                                2,
-                              );
-                              if (ctx.mounted) Navigator.of(ctx).pop();
-                              _cargarDatos();
-                            } catch (e) {
-                              if (!ctx.mounted) return;
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.alarm_on),
-                    label: const Text('Listo'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: pedido['estado_id'] == 8
-                        ? null
-                        : () async {
-                            try {
-                              await productoService.actualizarEstadoPedido(
-                                pedido['pedido_id'],
-                                8,
-                              );
-                              if (ctx.mounted) Navigator.of(ctx).pop();
-                              _cargarDatos();
-                            } catch (e) {
-                              if (!ctx.mounted) return;
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.handshake),
-                    label: const Text('Entregado y Pagado'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: pedido['estado_id'] == 6
-                        ? null
-                        : () async {
-                            try {
-                              await productoService.actualizarEstadoPedido(
-                                pedido['pedido_id'],
-                                6,
-                              );
-                              if (ctx.mounted) Navigator.of(ctx).pop();
-                              _cargarDatos();
-                            } catch (e) {
-                              if (!ctx.mounted) return;
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text('Cancelar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: pedido['estado_id'] == 3
-                        ? null
-                        : () async {
-                            try {
-                              await productoService.actualizarEstadoPedido(
-                                pedido['pedido_id'],
-                                3,
-                              );
-                              if (ctx.mounted) Navigator.of(ctx).pop();
-                              _cargarDatos();
-                            } catch (e) {
-                              if (!ctx.mounted) return;
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.payment),
-                    label: const Text('Pagado'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: pedido['estado_id'] == 4
-                        ? null
-                        : () async {
-                            try {
-                              await productoService.actualizarEstadoPedido(
-                                pedido['pedido_id'],
-                                4,
-                              );
-                              if (ctx.mounted) Navigator.of(ctx).pop();
-                              _cargarDatos();
-                            } catch (e) {
-                              if (!ctx.mounted) return;
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                  ),
-                ],
-              ),
-            ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget tituloSeccion(String texto, {Color? color}) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 4),
+        child: Text(
+          texto,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            letterSpacing: 0.4,
+            color: color ?? AppTheme.primaryColor,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cerrar'),
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final anchoPantalla = MediaQuery.of(ctx).size.width;
+        // Responsivo: en pantallas angostas ocupa casi todo el ancho,
+        // en pantallas anchas (tablet/web) se limita a 460 px.
+        final anchoDialogo = anchoPantalla < 500
+            ? anchoPantalla * 0.94
+            : 460.0;
+
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 24,
           ),
-        ],
-      ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: anchoDialogo,
+              maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Encabezado
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(18),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.receipt_long,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Pedido #${pedido['pedido_id']}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        tooltip: 'Cerrar',
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+                // Contenido con scroll
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        filaInfo(Icons.person_outline, cliente, color: AppTheme.textPrimary),
+                        filaInfo(Icons.email_outlined, correo),
+                        filaInfo(Icons.calendar_today_outlined, fecha),
+                        filaInfo(
+                          Icons.schedule,
+                          'Hora recogida: $horaRecogida',
+                          color: Colors.blue,
+                        ),
+                        filaInfo(Icons.credit_card, formaPago),
+                        const Divider(height: 20),
+                        if (notaGeneral != null &&
+                            notaGeneral.toString().isNotEmpty) ...[
+                          tituloSeccion(
+                            'MENSAJE DEL CLIENTE',
+                            color: Colors.deepOrange,
+                          ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: Text(
+                              notaGeneral.toString(),
+                              style: const TextStyle(fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ],
+                        if (referencia != null || comprobanteUrl != null) ...[
+                          tituloSeccion('Datos de pago del usuario'),
+                          if (referencia != null)
+                            filaInfo(Icons.tag, 'Referencia: $referencia'),
+                          if (comprobanteUrl != null) ...[
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Comprobante:',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Builder(
+                              builder: (ctx) {
+                                final url = comprobanteUrl is String
+                                    ? comprobanteUrl
+                                    : null;
+                                if (url == null) return const SizedBox.shrink();
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: ctx,
+                                        builder: (_) => Dialog(
+                                          child: InteractiveViewer(
+                                            child: Image.network(url),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        return SizedBox(
+                                          width: double.infinity,
+                                          height: 160,
+                                          child: Image.network(
+                                            url,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) =>
+                                                const Center(
+                                              child: Icon(
+                                                Icons.broken_image_outlined,
+                                                color: AppTheme.textSecondary,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                          const Divider(height: 24),
+                        ],
+                        tituloSeccion('Productos'),
+                        ...detalles.map((d) {
+                          final prod = d['productos'];
+                          final cantidad = d['cantidad'] as num? ?? 0;
+                          final precio = d['precio_unitario'] as num? ?? 0;
+                          final subtotal = cantidad * precio;
+                          final desc =
+                              d['Descripcion'] != null &&
+                                      d['Descripcion'].toString().isNotEmpty
+                                  ? d['Descripcion'].toString()
+                                  : '';
+
+                          return Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.backgroundColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${prod?['nombre'] ?? 'Producto'} (x$cantidad)',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      '\$${subtotal.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Precio unitario: \$${precio.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                if (desc.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Nota: $desc',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total USD',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            Text(
+                              '\$${totalUsd.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total Bs',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            Text(
+                              'Bs ${(totalUsd * tasaParaCalculo).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        tituloSeccion('Cambiar estado'),
+                        // Grilla responsiva de íconos de estado: se acomoda
+                        // sola según el ancho disponible del diálogo.
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            const espaciado = 10.0;
+                            const anchoBoton = 64.0;
+                            final columnas =
+                                ((constraints.maxWidth + espaciado) /
+                                        (anchoBoton + espaciado))
+                                    .floor()
+                                    .clamp(3, estados.length);
+                            return Wrap(
+                              spacing: espaciado,
+                              runSpacing: espaciado,
+                              children: estados.map((estado) {
+                                final activo = pedido['estado_id'] == estado['id'];
+                                final anchoItem =
+                                    (constraints.maxWidth -
+                                        (columnas - 1) * espaciado) /
+                                    columnas;
+                                return SizedBox(
+                                  width: anchoItem.clamp(56.0, 90.0),
+                                  child: Tooltip(
+                                    message: estado['label'] as String,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      onTap: activo
+                                          ? null
+                                          : () => cambiarEstado(
+                                              ctx, estado['id'] as int),
+                                      child: Opacity(
+                                        opacity: activo ? 0.5 : 1,
+                                        child: Column(
+                                          children: [
+                                            Container(
+                                              width: 48,
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                color: estado['color'] as Color,
+                                                shape: BoxShape.circle,
+                                                border: activo
+                                                    ? Border.all(
+                                                        color: AppTheme.textPrimary,
+                                                        width: 2,
+                                                      )
+                                                    : null,
+                                              ),
+                                              child: Icon(
+                                                estado['icon'] as IconData,
+                                                color: Colors.white,
+                                                size: 22,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              estado['label'] as String,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 10.5,
+                                                color: AppTheme.textSecondary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
