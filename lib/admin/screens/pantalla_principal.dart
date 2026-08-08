@@ -100,10 +100,69 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                 debugPrint('Error reproduciendo notificación: $e');
               }
             }
-            _cargarDatos();
+
+            _actualizarSoloPedidos();
           },
         )
         .subscribe();
+  }
+
+  Future<void> _actualizarSoloPedidos() async {
+    try {
+      final pedidos = await productoService.obtenerPedidos();
+      if (!mounted) return;
+      setState(() {
+        _listaPedidos = pedidos;
+      });
+    } catch (e) {
+      debugPrint('Error actualizando pedidos en tiempo real: $e');
+    }
+  }
+
+  Widget _buildRegistroHistorial(
+    Map<String, dynamic> registro, {
+    required bool esPrimero,
+  }) {
+    final valor = (registro['valor'] as num).toDouble();
+    final fechaMod = registro['fecha_mod'] as String?;
+    DateTime? fecha;
+    if (fechaMod != null) {
+      try {
+        fecha = DateTime.parse(fechaMod);
+      } catch (e) {}
+    }
+
+    final formatoFecha = fecha != null
+        ? '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year} ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}'
+        : 'Fecha desconocida';
+
+    return Card(
+      key: ValueKey(registro['id_tasa'] ?? '$fechaMod-$valor'),
+      margin: const EdgeInsets.only(bottom: 8),
+      color: esPrimero ? Colors.blue.withValues(alpha: 0.1) : null,
+      child: ListTile(
+        leading: Icon(
+          Icons.access_time,
+          color: esPrimero ? Colors.blue : Colors.grey,
+        ),
+        title: Text(
+          '${valor.toStringAsFixed(2)} bs = 1\$',
+          style: TextStyle(
+            fontWeight: esPrimero ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        subtitle: Text(formatoFecha),
+        trailing: esPrimero
+            ? const Chip(
+                label: Text(
+                  'Actual',
+                  style: TextStyle(fontSize: 12, color: Colors.white),
+                ),
+                backgroundColor: Colors.blue,
+              )
+            : null,
+      ),
+    );
   }
 
   @override
@@ -380,7 +439,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       }
     }
 
-    // Metadata de cada estado posible: id, etiqueta, ícono y color.
     final estados = <Map<String, dynamic>>[
       {
         'id': 2,
@@ -474,8 +532,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       context: context,
       builder: (ctx) {
         final anchoPantalla = MediaQuery.of(ctx).size.width;
-        // Responsivo: en pantallas angostas ocupa casi todo el ancho,
-        // en pantallas anchas (tablet/web) se limita a 460 px.
+
         final anchoDialogo = anchoPantalla < 500
             ? anchoPantalla * 0.94
             : 460.0;
@@ -496,7 +553,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Encabezado
+
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
@@ -534,7 +591,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     ],
                   ),
                 ),
-                // Contenido con scroll
+
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -743,8 +800,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                         ),
                         const Divider(height: 24),
                         tituloSeccion('Cambiar estado'),
-                        // Grilla responsiva de íconos de estado: se acomoda
-                        // sola según el ancho disponible del diálogo.
+
                         LayoutBuilder(
                           builder: (context, constraints) {
                             const espaciado = 10.0;
@@ -1628,7 +1684,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       ),
       child: Stack(
         children: [
-          // Icono decorativo de marca de agua
+
           Positioned(
             right: -16,
             bottom: -16,
@@ -1747,8 +1803,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  /// Tarjeta compacta con foto para un producto que aún no registra ventas.
-  /// Al tocar la foto se abre la vista ampliada con zoom.
   Widget _tarjetaProductoSinVentas(Map<String, dynamic> producto) {
     final String? imagenUrl = producto['imagen_url'] as String?;
     final String nombre = producto['nombre'] ?? 'Sin nombre';
@@ -1881,8 +1935,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     );
   }
 
-  /// Busca la URL de la imagen de un producto por su nombre, consultando
-  /// la lista completa de productos cargados desde Supabase.
   String? _obtenerImagenProductoPorNombre(String nombre) {
     for (final producto in _todosLosProductos) {
       if (producto['nombre'] == nombre) {
@@ -1892,8 +1944,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     return null;
   }
 
-  /// Muestra la imagen del producto ampliada en un diálogo, con zoom
-  /// interactivo (pellizcar para acercar) y una transición Hero fluida.
   void _ampliarImagenProducto(String? url, String nombre, String heroTag) {
     if (url == null || url.isEmpty) return;
     showDialog(
@@ -2353,62 +2403,17 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                       'No hay registros en el historial',
                       style: TextStyle(color: Colors.grey),
                     )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _historialTasaCambio.length,
-                      itemBuilder: (context, index) {
-                        final registro = _historialTasaCambio[index];
-                        final valor =
-                            (registro['valor'] as num).toDouble();
-                        final fechaMod = registro['fecha_mod'] as String?;
-                        DateTime? fecha;
-                        if (fechaMod != null) {
-                          try {
-                            fecha = DateTime.parse(fechaMod);
-                          } catch (e) {}
-                        }
 
-                        final esPrimero = index == 0;
-                        final formatoFecha = fecha != null
-                            ? '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year} ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}'
-                            : 'Fecha desconocida';
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          color: esPrimero
-                              ? Colors.blue.withValues(alpha: 0.1)
-                              : null,
-                          child: ListTile(
-                            leading: Icon(
-                              Icons.access_time,
-                              color:
-                                  esPrimero ? Colors.blue : Colors.grey,
-                            ),
-                            title: Text(
-                              '${valor.toStringAsFixed(2)} bs = 1\$',
-                              style: TextStyle(
-                                fontWeight: esPrimero
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                            subtitle: Text(formatoFecha),
-                            trailing: esPrimero
-                                ? const Chip(
-                                    label: Text(
-                                      'Actual',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    backgroundColor: Colors.blue,
-                                  )
-                                : null,
+                  : Column(
+                      children: [
+                        for (var index = 0;
+                            index < _historialTasaCambio.length;
+                            index++)
+                          _buildRegistroHistorial(
+                            _historialTasaCambio[index],
+                            esPrimero: index == 0,
                           ),
-                        );
-                      },
+                      ],
                     ),
             ],
           ),

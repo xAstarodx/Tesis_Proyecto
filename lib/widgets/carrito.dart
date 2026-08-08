@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../models/cart_model.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
+
+const String _ocrSpaceApiKey = 'K85411263488957';
 
 class CarritoPage extends StatefulWidget {
   const CarritoPage({super.key});
@@ -20,10 +24,126 @@ class _CarritoPageState extends State<CarritoPage> {
   String? _horaRecogida;
   File? _comprobanteImage;
   bool _estaEnviando = false;
+  bool _procesandoOcr = false;
   final _picker = ImagePicker();
 
   Future<void> _cargarFormasPago() async {
 
+  }
+
+  Future<void> _leerReferenciaDesdeImagen(File imagen) async {
+    setState(() => _procesandoOcr = true);
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://api.ocr.space/parse/image'),
+      );
+      request.fields['apikey'] = _ocrSpaceApiKey;
+      request.fields['language'] = 'spa';
+      request.fields['isOverlayRequired'] = 'false';
+      request.fields['OCREngine'] = '2';
+      request.files.add(
+        await http.MultipartFile.fromPath('file', imagen.path),
+      );
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200) {
+        throw Exception('Código de respuesta ${response.statusCode}');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (data['IsErroredOnProcessing'] == true) {
+        final mensajeError = (data['ErrorMessage'] is List &&
+                (data['ErrorMessage'] as List).isNotEmpty)
+            ? (data['ErrorMessage'] as List).first.toString()
+            : 'Error desconocido de OCR';
+        throw Exception(mensajeError);
+      }
+
+      final resultados = data['ParsedResults'] as List<dynamic>?;
+      if (resultados == null || resultados.isEmpty) {
+        throw Exception('No se pudo leer texto en la imagen');
+      }
+
+      final textoReconocido =
+          (resultados.first['ParsedText'] as String?) ?? '';
+      final referencia = _extraerUltimos4Digitos(textoReconocido);
+
+      if (referencia == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se detectó un número de referencia. Ingrésalo manualmente.',
+            ),
+            backgroundColor: AppTheme.warningColor,
+          ),
+        );
+        return;
+      }
+
+      _referenciaController.text = referencia;
+      CartModel.actualizarDatosCheckout(ref: referencia);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Referencia detectada: $referencia'),
+          backgroundColor: AppTheme.successColor,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo leer el comprobante automáticamente: $e'),
+          backgroundColor: AppTheme.warningColor,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _procesandoOcr = false);
+    }
+  }
+
+  String? _extraerUltimos4Digitos(String texto) {
+    if (texto.trim().isEmpty) return null;
+
+    final lineas = texto.split(RegExp(r'[\r\n]+'));
+    final regexNumeros = RegExp(r'\d{4,}');
+    final regexPalabraClave = RegExp(
+      r'referencia|ref\.?|nro\.?|n[uú]mero|operaci[oó]n',
+      caseSensitive: false,
+    );
+
+    for (final linea in lineas) {
+      if (regexPalabraClave.hasMatch(linea)) {
+        final coincidencia = regexNumeros
+            .allMatches(linea)
+            .map((m) => m.group(0)!)
+            .toList();
+        if (coincidencia.isNotEmpty) {
+          final masLarga =
+              coincidencia.reduce((a, b) => a.length >= b.length ? a : b);
+          return masLarga.substring(masLarga.length - 4);
+        }
+      }
+    }
+
+    final todasLasCoincidencias = regexNumeros
+        .allMatches(texto)
+        .map((m) => m.group(0)!)
+        .toList();
+    if (todasLasCoincidencias.isEmpty) return null;
+
+    final masLarga = todasLasCoincidencias
+        .reduce((a, b) => a.length >= b.length ? a : b);
+    return masLarga.substring(masLarga.length - 4);
   }
 
   @override
@@ -144,7 +264,7 @@ class _CarritoPageState extends State<CarritoPage> {
       },
     );
     if (picked != null) {
-      
+
       final now = TimeOfDay.now();
       final pickedMinutes = picked.hour * 60 + picked.minute;
       final nowMinutes = now.hour * 60 + now.minute;
@@ -161,7 +281,7 @@ class _CarritoPageState extends State<CarritoPage> {
             ),
           );
         }
-        return; 
+        return;
       }
 
       setState(() => _horaRecogida = picked.format(context));
@@ -819,14 +939,17 @@ class _CarritoPageState extends State<CarritoPage> {
           const SizedBox(height: 16),
 
           InkWell(
-            onTap: () async {
-              final XFile? image = await _picker.pickImage(
-                source: ImageSource.gallery,
-              );
-              if (image != null) {
-                setState(() => _comprobanteImage = File(image.path));
-              }
-            },
+            onTap: _procesandoOcr
+                ? null
+                : () async {
+                    final XFile? image = await _picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
+                    if (image == null) return;
+                    final archivo = File(image.path);
+                    setState(() => _comprobanteImage = archivo);
+                    await _leerReferenciaDesdeImagen(archivo);
+                  },
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -849,15 +972,21 @@ class _CarritoPageState extends State<CarritoPage> {
                           : AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      _comprobanteImage != null
-                          ? Icons.check_circle
-                          : Icons.add_a_photo_outlined,
-                      color: _comprobanteImage != null
-                          ? AppTheme.successColor
-                          : AppTheme.primaryColor,
-                      size: 24,
-                    ),
+                    child: _procesandoOcr
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            _comprobanteImage != null
+                                ? Icons.check_circle
+                                : Icons.add_a_photo_outlined,
+                            color: _comprobanteImage != null
+                                ? AppTheme.successColor
+                                : AppTheme.primaryColor,
+                            size: 24,
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -865,18 +994,28 @@ class _CarritoPageState extends State<CarritoPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _comprobanteImage != null
-                              ? 'Comprobante adjuntado'
-                              : 'Adjuntar comprobante de pago',
+                          _procesandoOcr
+                              ? 'Leyendo comprobante...'
+                              : _comprobanteImage != null
+                                  ? 'Comprobante adjuntado'
+                                  : 'Adjuntar comprobante de pago',
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                             color: AppTheme.textPrimary,
                           ),
                         ),
-                        if (_comprobanteImage == null)
+                        if (_comprobanteImage == null && !_procesandoOcr)
                           const Text(
                             'Toca para seleccionar una imagen',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        if (_comprobanteImage != null && !_procesandoOcr)
+                          const Text(
+                            'Referencia autocompletada si se detectó',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppTheme.textSecondary,
@@ -885,7 +1024,7 @@ class _CarritoPageState extends State<CarritoPage> {
                       ],
                     ),
                   ),
-                  if (_comprobanteImage != null)
+                  if (_comprobanteImage != null && !_procesandoOcr)
                     IconButton(
                       icon: const Icon(Icons.close, color: AppTheme.errorColor),
                       onPressed: () {
