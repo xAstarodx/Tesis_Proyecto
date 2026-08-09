@@ -8,6 +8,7 @@ import 'login.dart';
 import 'mis_pedidos.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
+import 'notification_bell_icon.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -122,7 +123,7 @@ class _MyHomePageState extends State<MyHomePage> {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cafetín ISABORES')),
+      appBar: AppBar(title: const Text('Cafetín ISABORES'), actions: const [NotificationBellIcon()],),
       drawer: Drawer(
         child: Column(
           children: [
